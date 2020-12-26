@@ -2,28 +2,34 @@ from kafka import KafkaProducer
 from kafka import KafkaConsumer
 import json
 import time
+from spotify_package._SpotiModelling import *
+from spotify_package._Downloader import *
+from variables import get_weeks
 
-
+#INIT 
+mongo = Mongo('dbname')
 
 def get_spotify_producer():
   producer = KafkaProducer(
     bootstrap_servers=['localhost:9092'],
     value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
+  downloader = Downloader()
+  weeks = get_weeks() 
 
-  countries = ['it', 'es'] # mettere tutti gli stati
-  weeks = ['2020-08-10', '2020-08-17'] # mettere tutte le settimane
+  [send_queue(downloader.get_data(week)) for week in weeks]
 
-  for c in countries:
-    for w in weeks:
-      downloaded_data = ('canzoni_' + c + '_' + w) # scaricare qui il csv
-      producer.send(topic='spotify', value=downloaded_data) # invia i dati alla coda
-      time.sleep(0.2) # senza lo sleep non va, senza motivo
 
+def send_queue(producer, df):
+  #send to kafka queue
+  producer.send(topic='spotify', value=df) # invia i dati alla coda
+  time.sleep(0.2) # senza lo sleep non va, senza motivo
 
 
 
 def get_spotify_consumer():
+
+  spoty_side = SpotiModelling()
   consumer = KafkaConsumer(
     bootstrap_servers=['localhost:9092'],
     auto_offset_reset='latest',
@@ -33,6 +39,8 @@ def get_spotify_consumer():
   consumer.subscribe(['spotify'])
 
   for msg in consumer:
-    print(msg.value)
-    # query a spotify
-    # upload su mongo
+    print("Messag is arrivat, tutt bn")
+    model = spoty_side.get_week(msg.value)# query a spotify
+    mongo.store_week(model)# upload su mongo
+    print("Document inserted correctly!")
+    
