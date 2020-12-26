@@ -77,23 +77,12 @@ class SpotiModelling():
         "vn": "vietnam",
         "za": "south_africa"
     }
-    self.weeks = [
-        '2020-12-25', '2020-12-18',
-        '2020-12-11', '2020-12-04',
-        '2020-11-27', '2020-11-20',
-        '2020-11-13', '2020-11-06',
-        '2020-10-30', '2020-10-23',
-        '2020-10-16', '2020-10-09',
-        '2020-10-02', '2020-09-25',
-        '2020-09-18', '2020-09-11',
-        '2020-09-04', '2020-08-28',
-        '2020-08-21', '2020-08-14'
-    ]
+        
 
     def get_week_data(self, df_songs, list_countries):
         #df_week = df_songs[df_songs['week_from'] == week]
         df_week = df_songs #dataframe has only one week
-        data = [get_week_country_data(df_week, country)
+        data = [self.get_week_country_data(df_week, country)
                 for country in list_countries]
 
         return dict(ChainMap(*data))
@@ -106,13 +95,13 @@ class SpotiModelling():
         json_df = df.to_json(orient="records")
         parsed = json.loads(json_df)
 
-        songs = [create_song(song) for song in parsed]
+        songs = [self.create_song(song) for song in parsed]
 
         # print(json.dumps(parsed,indent=4))
         # time.sleep(10)
-        index_spotify = create_index(songs)
+        index_spotify = self.create_index(songs)
 
-        country_name = code_to_country(country.lower())
+        country_name = self.code_to_country(country.lower())
         model = {
             "songs": songs,
             "spotify_index": index_spotify,
@@ -123,7 +112,7 @@ class SpotiModelling():
 
     def create_song(self, song):
         song_id = song['URL'].split('/')[-1]
-        index = add_unique_song(song_id, song)
+        index = self.add_unique_song(song_id, song)
         model = {
             "id": song_id,
             "streams": song['Streams'],
@@ -141,7 +130,7 @@ class SpotiModelling():
         
         query = self.song_db.find_unique_song('songs', song_id)
         if (query is None):  # else add song
-            features = spotipy.get_track_feature(song_id)
+            features = self.spotipy.get_track_feature(song_id)
             if features is None:
                 features = {
                     'danceability': 0,
@@ -194,17 +183,19 @@ class SpotiModelling():
     def model_week(self, df, week):     
         list_week_froms = df.week_from.unique()  # gets unique weeks (one)
         list_countries = df.country.unique()  # gets unique countries
-        week_data = get_week_data(df, list_countries)
+        week_data = self.get_week_data(df, list_countries)
         return week_data
 
 
-    def get_week(self, df):
+    def get_week(self, df_json):
         #week = df['week_from'].iloc[0]
+
+        df = pd.read_json(df_json, orient='records')
         list_week_froms = df.week_from.unique()
         week = list_week_froms[0]
         model = {
             "week": week,
-            "spotify": model_week(df, week)
+            "spotify": self.model_week(df, week)
         }
         
         return model

@@ -41,19 +41,18 @@ class Downloader():
         return "https://spotifycharts.com/regional/" + nation + "/weekly/" + week + "/download"
 
     def get_week_format(self, day):
-            d = datetime.strptime(day, '%Y-%m-%d')
-            diffMonday = d.weekday()
-            d = d + timedelta(days=-diffMonday)
-            s = d + timedelta(days=-3)
-            prev_day = str(s.date())
-            d = datetime.strptime(prev_day, '%Y-%m-%d')
-            d = d + timedelta(days=7)
-            next_day = str(d.date())
-            date_week = prev_day + '--' + next_day
-            return date_week
+        d = datetime.strptime(day, '%Y-%m-%d')
+        diffMonday = d.weekday()
+        d = d + timedelta(days=-diffMonday)
+        s = d + timedelta(days=-3)
+        prev_day = str(s.date())
+        d = datetime.strptime(prev_day, '%Y-%m-%d')
+        d = d + timedelta(days=7)
+        next_day = str(d.date())
+        date_week = prev_day + '--' + next_day
+        return date_week
 
-    def download(self, nation, day):
-        week = get_week_format(day)
+    def download(self, nation, week):
         url = self.build_url(nation, week)
         req = requests.get(url)
         if (req.status_code == 200):
@@ -95,9 +94,14 @@ class Downloader():
 
 
     #main of class
-    def get_data(self, week): #data of week X
-        return self.mos(pd.DataFrame(columns=["Position","Track_Name","Artist",
-                                            "Streams","URL"]), week)
+    def get_data(self, day): #data of week X
 
+        week = self.get_week_format(day)
+        df = self.mos(pd.DataFrame(columns=["Position","Track_Name","Artist",
+                                            "Streams","URL"]), week)
+        df_json = df.to_json(orient='records')
+        #print(df_json)
+        return df_json
+    
 
     
