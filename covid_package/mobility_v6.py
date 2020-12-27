@@ -21,19 +21,25 @@ class Covid_Side:
     def get_week_doc(self, week):
         tmp = self.df[self.df['date']==week]
         doc = {}
+        doc_norm = {}
         countries = list(tmp['country'])
-        mobilities = list(tmp['mobility_norm'])
+        mobilities = list(tmp['mobility'])
+        mobilities_norm = list(tmp['mobility_norm'])
         country_dict = self.get_country_dict()
         for i in range(0, len(countries)):
             if countries[i] in country_dict.keys():
                 doc[country_dict[countries[i]].lower()] = mobilities[i]
-        return doc
+                doc_norm[country_dict[countries[i]].lower()] = mobilities_norm[i]
+        return doc, doc_norm
 
 
     def get_week_doc_complete(self, week):
-        doc = self.get_week_doc(week)
-        tmp = '{\"week\": \"' + week + '\", \"mobility\": ' + json.dumps(doc) + '}'
-        return json.loads(tmp)
+        if week in set(self.df['date']):
+            doc, doc_norm = self.get_week_doc(week)
+            tmp = {'week': week, 'mobility': doc, 'mobility_norm': doc_norm}
+            return tmp
+        else:
+            return ''
 
 
     # download the dataset
