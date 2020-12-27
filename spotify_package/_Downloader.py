@@ -13,22 +13,22 @@ class Downloader():
 
     def __init__(self):
         self.country_codes= [
-                        'AR', 'AU', 'AT',  
-                        'BE', 'BR', 'BG',  
+                        'AR', 'AU', 'AT',
+                        'BE', 'BR', 'BG',
                         'CA', 'CO', 'CZ', 'CH',
                         'DK', 'DE',
                         'ES', 'EE',
-                        'FI', 'FR',  
+                        'FI', 'FR',
                         'GR', 'GB',
-                        'HK', 'HU', 
+                        'HK', 'HU',
                         'IS', 'IE', 'IT', 'IL', 'IN',
-                        'JP', 
-                        'LV', 'LT',  
-                        'MY', 'MX', 
-                        'NL', 'NZ', 'NO', 
+                        'JP',
+                        'LV', 'LT',
+                        'MY', 'MX',
+                        'NL', 'NZ', 'NO',
                         'PH', 'PL', 'PT',
                         'RO', 'RU',
-                        'SG', 'SE',  
+                        'SG', 'SE',
                         'TW', 'TR', 'TH',
                         'US', 'UY', 'UA',
                         'VN',
@@ -81,7 +81,7 @@ class Downloader():
         df['week_from'] = w.split("--")[0]
         df['week_to'] = w.split("--")[1]
         df['country'] = n
-        
+
         return df
 
     def mos(self, df, week):
@@ -91,7 +91,7 @@ class Downloader():
         return df
 
 
-    
+
 
 
     #main of class
@@ -103,6 +103,3 @@ class Downloader():
         df_json = df.to_json(orient='records')
         #print(df_json)
         return df_json
-    
-
-    

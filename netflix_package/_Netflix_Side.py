@@ -9,9 +9,9 @@ class Netflix_Side():
     Tutta la gestione dei soli dati relativi ai film
     """
 
-    def __init__(self):
+    def __init__(self, movie_db):
         self.FP = FlixPatrol(FS.get_countries())
-        self.IMDB = IMDB_Interface()
+        self.IMDB = IMDB_Interface(movie_db)
 
 #------------------------------------------------------------------------------#
 

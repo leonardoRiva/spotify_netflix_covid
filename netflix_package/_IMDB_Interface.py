@@ -25,10 +25,12 @@ class IMDB_Interface():
     recupera info dei film
     """
 
-    def __init__(self):
+    def __init__(self, movie_db):
         self.ia = IMDb()
-        client = pymdb.MongoClient('localhost:27017')
-        self.movie_db = client.movies_db
+        self.MDB = movie_db
+        #client = pymdb.MongoClient('localhost:27017')
+        #self.movie_db = MDB.get_db()
+        #self.movie_db = client.movies_db
         # mdb = Movies_DB()
         # self.movie_db = mdb.get_db()
 
@@ -56,7 +58,8 @@ class IMDB_Interface():
             if m_key != '':
                 movie = None
                 stored = False
-                mov = self.movie_db.movies.find({"_id": m_key})
+                mov = self.MDB.find_movie(m_key)
+                #mov = self.movie_db.movies.find({"_id": m_key})
                 if mov.count() == 1:
                     print("found local")
                     stored = True
@@ -76,7 +79,8 @@ class IMDB_Interface():
                         movie[k] = ''
                 [out[k].append(movie[k]) for k in out]
                 if not stored:
-                    self.movie_db.movies.insert_one({"_id":movie["_id"], "title":movie["title"], "genres":movie["genres"].split(), "keywords":movie["keywords"].split(), "plot outline":movie["plot outline"]})
+                    self.MDB.store_movie(movie["_id"], movie["title"], movie["genres"], movie["keywords"], movie["plot outline"])
+                    #self.movie_db.movies.insert_one({"_id":movie["_id"], "title":movie["title"], "genres":movie["genres"].split(), "keywords":movie["keywords"].split(), "plot outline":movie["plot outline"]})
             else:
                 [out[k].append('') for k in out]
         return out

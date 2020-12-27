@@ -6,9 +6,12 @@ from netflix_package._Movies_DB import Movies_DB
 import pandas as pd
 import json
 import time
+import variables as GLV
 from threading import Thread
 
-countries = {
+#------------------------------------------------------------------------------#
+
+countries_old = {
    "argentina":{
       "netflix":"argentina"
    },
@@ -148,44 +151,30 @@ countries = {
       "netflix":"vietnam"
    }
 }
-weeks = [
-    '2020-08-10',
-    '2020-08-17',
-    '2020-08-24',
-    '2020-08-31',
-    '2020-09-07',
-    '2020-09-14',
-    '2020-09-21',
-    '2020-09-28',
-    '2020-10-05',
-    '2020-10-12',
-    '2020-10-19',
-    '2020-10-26',
-    '2020-11-02',
-    '2020-11-09',
-    '2020-11-16',
-    '2020-11-23',
-    '2020-11-30',
-    '2020-12-07',
-    '2020-12-14',
-    '2020-12-21'
-]
+countries = GLV.netflix_countries_codes()
+weeks = GLV.get_common_weeks_list()
+
+#------------------------------------------------------------------------------#
 
 def get_netflix_producer():
-    FP_Scraper = FlixPatrol([countries[c]['netflix'] for c in countries])
+    FP_Scraper = FlixPatrol(c for c in [countries])
     producer = KafkaProducer(
         bootstrap_servers=['localhost:9092'],
         value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     for ic,c in enumerate(countries):
         for w in weeks[0:3]:
-            scraped_data = FP_Scraper.get_weeks_chart(w, countries[c]['netflix'])
+            scraped_data = FP_Scraper.get_weeks_chart(w, c)
             producer.send(topic='netflix', value=scraped_data.to_json()) # invia i dati alla coda
+            print("send netflix scraped week: " + w + ", country: " + c)
             time.sleep(0.1) # senza lo sleep non va, senza motivo
 
+#------------------------------------------------------------------------------#
+
 def get_netflix_consumer():
-    NF_Side = Netflix_Side()
-    MDB = Movies_DB()
+    MDB = Movies_DB(GLV)
+    NF_Side = Netflix_Side(MDB)
+
     consumer = KafkaConsumer(
         bootstrap_servers=['localhost:9092'],
         auto_offset_reset='latest',
@@ -197,13 +186,10 @@ def get_netflix_consumer():
     for msg in consumer:
         df = pd.read_json(msg.value)
         df_full = NF_Side.enrich_df(df)
-
-        print("\n\n")
-        print("in arrivo!")
         MDB.store_week(df_full)
-        print(df_full)
-        print("\n\n")
+        print("\n\n" + "netflix processed: \n" + str(df_full) + "\n\n")
 
+#------------------------------------------------------------------------------#
 
 if __name__ == "__main__":
     tp = Thread(target=get_netflix_producer)
