@@ -8,6 +8,8 @@ import time
 from collections import ChainMap
 from datetime import timedelta, datetime, date
 
+from ../keys.spotify_api import *
+
 
 
 
@@ -17,9 +19,8 @@ class SpotiModelling():
 
 
     def __init__(self):
-        SPOTIPY_CLIENT_ID = '7555ebe9080d478e8b1881bd019fe2ee'
-        SPOTIPY_CLIENT_SECRET = '285cf43f636446928a3b539db763fa50'
-        self.spotipy = Spotify(SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET)
+
+        self.spotipy = Spotify(get_credentials())
         self.song_db = Mongo('progettoDB') #DATABASE OF UNIQUE SONGS
         self.countries = {
         "au": "australia",
@@ -132,22 +133,22 @@ class SpotiModelling():
         if (query is None):  # else add song
             features = self.spotipy.get_track_feature(song_id)
             if features is None:
-                features = {
-                    'danceability': 0,
-                    'energy': 0,
-                    'loudness': 0,
-                    'mode': 0,
-                    'speechiness': 0,
-                    'acousticness': 0,
-                    'instrumentalness': 0,
-                    'liveness': 0,
-                    'valence': 0,
-                    'tempo': 0
-                }
+                # features = {
+                #     'danceability': 0,
+                #     'energy': 0,
+                #     'loudness': 0,
+                #     'mode': 0,
+                #     'speechiness': 0,
+                #     'acousticness': 0,
+                #     'instrumentalness': 0,
+                #     'liveness': 0,
+                #     'valence': 0,
+                #     'tempo': 0
+                # }
                 index = None
             else:
                 index = features['valence'] + features['danceability'] + features['energy']
-            self.song_db.store_song(song, features)
+                self.song_db.store_song(song, features)
             return index
         else:
             index = query['features']['valence'] + query['features']['danceability'] + query['features']['energy']
