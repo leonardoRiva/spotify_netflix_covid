@@ -77,6 +77,7 @@ class Downloader():
         # for index, song in enumerate(df['URL']):
         #   song_id = song.split('/')[-1]
         #   df = add_features(df, index, song_id)
+        print(w)
         df['week_from'] = w.split("--")[0]
         df['week_to'] = w.split("--")[1]
         df['country'] = n

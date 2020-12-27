@@ -80,6 +80,7 @@ class SpotiModelling():
     }
         
 
+
     def get_week_data(self, df_songs, list_countries):
         #df_week = df_songs[df_songs['week_from'] == week]
         df_week = df_songs #dataframe has only one week
