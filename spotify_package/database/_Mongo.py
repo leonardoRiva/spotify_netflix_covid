@@ -32,3 +32,9 @@ class Mongo():
     def find_unique_song(self, collection, song_id):
         return self.db[collection].find_one({"song_id": song_id})
 
+    def find_query(self, collection, query):
+        return self.db[collection].find(query)
+
+    def kill_query(self, collection, query):
+        return self.db[collection].delete_many(query)
+

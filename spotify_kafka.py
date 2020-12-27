@@ -2,6 +2,7 @@ from kafka import KafkaProducer
 from kafka import KafkaConsumer
 import json
 import time
+from spotify_package.database._Mongo import *
 from spotify_package._SpotiModelling import *
 from spotify_package._Downloader import *
 from variables import get_weeks
