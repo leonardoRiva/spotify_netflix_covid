@@ -1,8 +1,11 @@
+import sys, os
 import pandas as pd
 import datetime
 import json
 import math
 import io
+sys.path.append(os.path.abspath(os.path.join('..', 'config')))
+from variables import *
 
 class Covid_Side:
 
@@ -21,19 +24,26 @@ class Covid_Side:
     def get_week_doc(self, week):
         tmp = self.df[self.df['date']==week]
         doc = {}
+        doc_norm = {}
         countries = list(tmp['country'])
-        mobilities = list(tmp['mobility_norm'])
-        country_dict = self.get_country_dict()
+        mobilities = list(tmp['mobility'])
+        mobilities_norm = list(tmp['mobility_norm'])
+        country_dict = get_country_to_code_dict()
         for i in range(0, len(countries)):
-            if countries[i] in country_dict.keys():
-                doc[country_dict[countries[i]].lower()] = mobilities[i]
-        return doc
+            c = countries[i].lower().replace(' ', '-')
+            if c in country_dict:
+                doc[country_dict[c]] = mobilities[i]
+                doc_norm[country_dict[c]] = mobilities_norm[i]
+        return doc, doc_norm
 
 
     def get_week_doc_complete(self, week):
-        doc = self.get_week_doc(week)
-        tmp = '{\"week\": \"' + week + '\", \"mobility\": ' + json.dumps(doc) + '}'
-        return json.loads(tmp)
+        if week in set(self.df['date']):
+            doc, doc_norm = self.get_week_doc(week)
+            tmp = {'week': week, 'mobility': doc, 'mobility_norm': doc_norm}
+            return tmp
+        else:
+            return ''
 
 
     # download the dataset
@@ -140,20 +150,3 @@ class Covid_Side:
             v += 0.1
             limit += 8
         return round(v, 2)+0
-
-
-    def get_country_dict(self):
-        return {'Argentina': 'AR', 'Australia': 'AU', 'Austria': 'AT', 
-          'Belgium': 'BE', 'Bulgaria': 'BG', 'Brazil': 'BR', 'Canada': 'CA', 
-          'Switzerland': 'CH', 'Colombia': 'CO', 'Czechia': 'CZ', 
-          'Germany': 'DE', 'Denmark': 'DK', 'Spain': 'ES', 'Estonia': 'EE', 
-          'Finland': 'FI', 'France': 'FR', 'United Kingdom': 'GB', 
-          'Greece': 'GR', 'Hong Kong': 'HK', 'Hungary': 'HU', 'India': 'IN', 
-          'Ireland': 'IE', 'Israel': 'IL', 'Italy': 'IT', 'Japan': 'JP', 
-          'Lithuania': 'LT', 'Latvia': 'LV', 'Mexico': 'MX', 'Malaysia': 'MY', 
-          'Netherlands': 'NL', 'Norway': 'NO', 'New Zealand': 'NZ', 
-          'Philippines': 'PH', 'Poland': 'PL', 'Portugal': 'PT', 
-          'Romania': 'RO', 'Russia': 'RU', 'Singapore': 'SG', 'Sweden': 'SE', 
-          'Thailand': 'TH', 'Turkey': 'TR', 'Taiwan': 'TW','Ukraine': 'UA', 
-          'Uruguay': 'UY', 'United States': 'US', 'Vietnam': 'VN', 
-          'South Africa': 'ZA'}
