@@ -25,6 +25,7 @@ def get_covid_producer():
     # classe per il download dei dati
     mob = Covid_Side()
     weeks = get_weeks(collection)
+    print('Covid data downloaded')
 
     # invio dei documenti
     for w in weeks:

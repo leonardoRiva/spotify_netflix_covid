@@ -1,10 +1,7 @@
-import sys, os
 import pandas as pd
-import datetime
-import json
+import sys, os
 import math
-import io
-sys.path.append(os.path.abspath(os.path.join('..', 'config')))
+sys.path.append(os.path.abspath(os.path.join('..', 'config'))) # to import files outside the package
 from variables import *
 
 class Covid_Side:
@@ -14,6 +11,7 @@ class Covid_Side:
 
 
     def get_df_data(self):
+        # downloads the csv, cleans it and calculates the index; returns a pandas dataframe
         downloaded_df = self.download_csv()
         cleaned_df = self.clean_csv(downloaded_df)
         df = self.calculate_index(cleaned_df)
@@ -21,39 +19,15 @@ class Covid_Side:
         return df
 
 
-    def get_week_doc(self, week):
-        tmp = self.df[self.df['date']==week]
-        doc = {}
-        doc_norm = {}
-        countries = list(tmp['country'])
-        mobilities = list(tmp['mobility'])
-        mobilities_norm = list(tmp['mobility_norm'])
-        country_dict = covid_countries_codes()
-        for i in range(0, len(countries)):
-            c = countries[i].lower().replace(' ', '-')
-            if c in country_dict:
-                doc[country_dict[c]] = mobilities[i]
-                doc_norm[country_dict[c]] = mobilities_norm[i]
-        return doc, doc_norm
-
-
-    def get_week_doc_complete(self, week):
-        if week in set(self.df['date']):
-            doc, doc_norm = self.get_week_doc(week)
-            tmp = {'week': week, 'mobility': doc, 'mobility_norm': doc_norm}
-            return tmp
-        else:
-            return ''
-
-
-    # download the dataset
     def download_csv(self):
+        # downloads the dataset
         url = 'https://raw.githubusercontent.com/ActiveConclusion/COVID19_mobility/master/summary_reports/summary_report_countries.csv'
         return pd.read_csv(url)
 
 
-    # delete useless columns, rename the remaining, delete rows with NaN
     def clean_csv(self, df):
+        # deletes useless columns, renames the remaining ones, 
+        # interpolates internal missing values, deletes rows with NaN
         del df['transit']
         del df['grocery and pharmacy']
         del df['residential']
@@ -66,6 +40,7 @@ class Covid_Side:
 
     
     def interpolate_nan(self, df):
+        # returns a dataframe with missing values interpolated
         new_df = pd.DataFrame(columns=df.columns)
         for c in set(df['country']):
             tmp = (df[df['country']==c]).copy()
@@ -77,6 +52,7 @@ class Covid_Side:
 
 
     def interpolate_nan_single(self, a):
+        # interpolates the missing values by "connecting" previous and next value 
         start = 0
         for i in range(0,len(a)):
             if not math.isnan(a[i]):
@@ -103,8 +79,9 @@ class Covid_Side:
         return a
 
 
-    # calculate mobility index, with a mean of the values for each country / week
+    
     def calculate_index(self, df):
+        # calculates the mobility index, with a mean of the values for each country and each week
         df = self.calculate_rolling_mean(df) #rolling mean
         df = df[pd.to_datetime(df['date']).dt.day_name().isin(['Monday'])] #selecting mondays
         df['mobility'] = df.mean(axis=1) #mean between the 4 indexes
@@ -114,16 +91,17 @@ class Covid_Side:
 
 
     def calculate_rolling_mean(self, df):
+        # calculates the rolling mean of the mobility, for each country, with a 7-days window
         new_df = pd.DataFrame(columns=df.columns)
         for c in set(df['country']):
             tmp = df[df['country']==c]
-            tmp = self.calculate_country_rolling_mean(tmp)
+            tmp = self.calculate_rolling_mean_single(tmp)
             new_df = new_df.append(tmp)
         new_df = new_df.reset_index(drop=True)
         return new_df
 
 
-    def calculate_country_rolling_mean(self, df):
+    def calculate_rolling_mean_single(self, df):
         new_df = pd.DataFrame()
         new_df['country'] = list(df['country'][6:])
         new_df['date'] = list(df['date'][:-6])
@@ -133,6 +111,7 @@ class Covid_Side:
 
 
     def get_normalized_mobility(self, df):
+        # normalizes the mobility between -1 and 1
         values = list(df['mobility'])
         n = []
         for v in values:
@@ -142,11 +121,38 @@ class Covid_Side:
 
 
     def get_mobility_level_single(self, m):
-        # da [...,-76] a [84,...]
-        # intervalli da 8
+        # from [...,-76] to [84,...]
+        # intervals length = 8
         v = -1
         limit = -76
         while m >= limit and limit < 84:
             v += 0.1
             limit += 8
         return round(v, 2)+0
+
+
+    def get_week_docs(self, week):
+        # returns two jsons (mobility and normalized mobility)
+        tmp = self.df[self.df['date']==week]
+        doc = {}
+        doc_norm = {}
+        countries = list(tmp['country'])
+        mobilities = list(tmp['mobility'])
+        mobilities_norm = list(tmp['mobility_norm'])
+        country_dict = covid_countries_codes()
+        for i in range(0, len(countries)):
+            c = countries[i].lower().replace(' ', '-')
+            if c in country_dict:
+                doc[country_dict[c]] = mobilities[i]
+                doc_norm[country_dict[c]] = mobilities_norm[i]
+        return doc, doc_norm
+
+
+    def get_week_doc_complete(self, week):
+        # returns the final json to be uploaded to mongodb
+        if week in set(self.df['date']):
+            doc, doc_norm = self.get_week_docs(week)
+            tmp = {'week': week, 'mobility': doc, 'mobility_norm': doc_norm}
+            return tmp
+        else:
+            return ''
