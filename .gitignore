@@ -7,3 +7,4 @@ remove_songs.py
 /spotify_package/__pycache__
 /spotify_package/database/__pycache__
 /covid_package/__pycache__
+/netflix_package/__pycache__

@@ -16,7 +16,7 @@ def get_spotify_producer():
     value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
   downloader = Downloader()
-  weeks = get_weeks() 
+  weeks = get_weeks()
 
   for week in weeks:
     #send to kafka queue

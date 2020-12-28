@@ -79,7 +79,8 @@ class SpotiModelling():
         "vn": "vietnam",
         "za": "south_africa"
     }
-        
+
+
 
     def get_week_data(self, df_songs, list_countries):
         #df_week = df_songs[df_songs['week_from'] == week]
@@ -170,7 +171,7 @@ class SpotiModelling():
     
     def add_unique_song(self, song_id, song):
         #check if song_id exist in collection songs
-        
+
         query = self.song_db.find_unique_song('songs', song_id)
         if (query is None):  # else add song
             features = self.spotipy.get_track_feature(song_id)
@@ -219,7 +220,7 @@ class SpotiModelling():
         return index
 
 
-    
+
 
 
     def get_country_codes(self):
@@ -233,7 +234,7 @@ class SpotiModelling():
         return [label for label in self.countries if self.countries[label] == country][0]
 
 
-    def model_week(self, df, week):     
+    def model_week(self, df, week):
         list_week_froms = df.week_from.unique()  # gets unique weeks (one)
         list_countries = df.country.unique()  # gets unique countries
         week_data = self.get_week_data(df, list_countries)
@@ -250,9 +251,5 @@ class SpotiModelling():
             "week": week,
             "spotify": self.model_week(df, week)
         }
-        
+
         return model
-
-
-
-
