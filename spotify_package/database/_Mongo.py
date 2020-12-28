@@ -21,13 +21,16 @@ class Mongo():
 
     def store_song(self, song, features):
         doc = self.models.song_model(song, features)
-        self.store('songs', doc)
+        return self.store('songs', doc)
         #TEST
         #self.store('songs_v2', doc)
         
+        
     def store(self, collection, data):
-        self.db[collection].insert(data)
-        return True
+        #return self.db[collection].insert(data)
+        _id = self.db[collection].insert(data)
+        return {**{'_id': _id}, **data}
+        
 
     def find_unique_song(self, collection, song_id):
         return self.db[collection].find_one({"song_id": song_id})

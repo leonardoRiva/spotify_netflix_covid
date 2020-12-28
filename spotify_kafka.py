@@ -8,7 +8,7 @@ from spotify_package._Downloader import *
 from variables import get_weeks
 
 #INIT 
-mongo = Mongo('progettoDB')
+mongo = Mongo('DBtest1')
 
 def get_spotify_producer():
   producer = KafkaProducer(
@@ -36,7 +36,7 @@ def send_queue(producer, df):
 
 def get_spotify_consumer():
 
-  spoty_side = SpotiModelling()
+  spoty_side = SpotiModelling(mongo)
   consumer = KafkaConsumer(
     bootstrap_servers=['localhost:9092'],
     auto_offset_reset='latest',

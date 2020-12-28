@@ -14,3 +14,6 @@ class Spotify():
 
     def get_track_feature(self, _id):
         return self.sp.audio_features(_id)[0]
+
+    def get_tracks_feature(self, ids):
+        return self.sp.audio_features(ids)

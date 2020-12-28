@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import numpy as np
 
 from spotify_package.database._Mongo import *
 from spotify_package._Spotify import *
@@ -8,7 +9,7 @@ import time
 from collections import ChainMap
 from datetime import timedelta, datetime, date
 
-from ../keys.spotify_api import *
+from spotify_package._keys import get_credentials
 
 
 
@@ -18,10 +19,10 @@ class SpotiModelling():
 
 
 
-    def __init__(self):
-
-        self.spotipy = Spotify(get_credentials())
-        self.song_db = Mongo('progettoDB') #DATABASE OF UNIQUE SONGS
+    def __init__(self, mongo):
+        c1, c2 = get_credentials()
+        self.spotipy = Spotify(c1, c2)
+        self.song_db = mongo #DATABASE OF UNIQUE SONGS
         self.countries = {
         "au": "australia",
         "ar": "argentina",
@@ -47,7 +48,7 @@ class SpotiModelling():
         "hk": "hong_kong",
         #"id": "indonesia",
         "in": "india",
-        "is": "iceland",
+        #"is": "iceland",
         "ie": "ireland",
         "il": "israel",
         "it": "italy",
@@ -96,43 +97,84 @@ class SpotiModelling():
         json_df = df.to_json(orient="records")
         parsed = json.loads(json_df)
 
-        songs = [self.create_song(song) for song in parsed]
+        #SINGLE SONG 
+        #songs = [self.create_song(song) for song in parsed]
+        #index_spotify = self.create_index(songs)
 
-        # print(json.dumps(parsed,indent=4))
-        # time.sleep(10)
-        index_spotify = self.create_index(songs)
+        #MULTI SONG
+        songs, index_spotify = self.add_unique_song_all(parsed)
 
-        country_name = self.code_to_country(country.lower())
+        #country_name = self.code_to_country(country.lower())
+        country_name = country.lower()
         model = {
             "songs": songs,
             "spotify_index": index_spotify,
         }
 
         return {country_name: model}
+    
+    
+    def split_by_hundred(self, l):
 
-
-    def create_song(self, song):
-        song_id = song['URL'].split('/')[-1]
-        index = self.add_unique_song(song_id, song)
-        model = {
-            "id": song_id,
-            "streams": song['Streams'],
-            "position": song['Position'],
-            "index": index
-        }
-
+        if len(l) < 100:# < 100 TOP CHARTS
+            return [l]
+        else: #200 TOP CHARTS
+            return [l[:100], l[100:]]
         
 
-        return model
+    def add_unique_song_all(self, df):
+        #get data from db if exists, otherwise None
+        query = [self.song_db.find_unique_song('songs', song['URL'].split('/')[-1]) for song in df]
+
+        none_songs = []
+        for i, song in enumerate(query):#creates array of song_ids that are not in db
+            if song is None:
+                none_songs.append(df[i]['URL'].split('/')[-1])
+
+        splitted = self.split_by_hundred(none_songs) #split array in arrays of max len 100
+
+        q = []
+        for l in splitted:#get tracks of groups of Ids then flat output
+            q = q + self.spotipy.get_tracks_feature(l)
 
 
+        index = 0
+        songs = []
+        n = 0
+        for i, song in enumerate(query):#adds features to new songs
+            song_index = None
+            if song is None:
+                features = q.pop(0)#removes first
+                if features is not None:
+                    self.song_db.store_song(df[i], features)
+                    song_index = features['valence'] + features['danceability'] + features['energy']
+                    n = n + 1
+            else:
+                song_index = song['features']['valence'] + song['features']['danceability'] + song['features']['energy']
+                n = n + 1
+            
+            model = {
+                "id": df[i]['URL'].split('/')[-1],
+                "streams": df[i]['Streams'],
+                "position": df[i]['Position'],
+                "index": song_index
+            }
+            songs.append(model)
+            index = index + song_index
+        #returns list of enhanced songs and total index of single country
+        return songs, index/n
+                
+        
+
+
+    
     def add_unique_song(self, song_id, song):
         #check if song_id exist in collection songs
         
         query = self.song_db.find_unique_song('songs', song_id)
         if (query is None):  # else add song
             features = self.spotipy.get_track_feature(song_id)
-            if features is None:
+            if features is None: # not save in db
                 # features = {
                 #     'danceability': 0,
                 #     'energy': 0,
@@ -154,6 +196,16 @@ class SpotiModelling():
             index = query['features']['valence'] + query['features']['danceability'] + query['features']['energy']
             return index
 
+    def create_song(self, song):
+        song_id = song['URL'].split('/')[-1]
+        index = self.add_unique_song(song_id, song)
+        model = {
+            "id": song_id,
+            "streams": song['Streams'],
+            "position": song['Position'],
+            "index": index
+        }
+        return model
 
     def create_index(self, songs):
         index = 0
