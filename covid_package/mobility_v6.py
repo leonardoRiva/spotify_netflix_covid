@@ -28,7 +28,7 @@ class Covid_Side:
         countries = list(tmp['country'])
         mobilities = list(tmp['mobility'])
         mobilities_norm = list(tmp['mobility_norm'])
-        country_dict = get_country_to_code_dict()
+        country_dict = covid_countries_codes()
         for i in range(0, len(countries)):
             c = countries[i].lower().replace(' ', '-')
             if c in country_dict:
