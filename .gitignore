@@ -1,5 +1,9 @@
 temp.csv
 remove_songs.py
 
-/keys/spotify_api.py
-/keys/imdb_api.py
+/spotify_package/_keys.py
+
+/__pycache__
+/spotify_package/__pycache__
+/spotify_package/database/__pycache__
+/covid_package/__pycache__
