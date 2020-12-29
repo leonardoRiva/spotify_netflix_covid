@@ -19,66 +19,11 @@ class SpotiModelling():
 
 
 
-    def __init__(self, mongo):
+    def __init__(self, mongo, dic_countries):
         c1, c2 = get_credentials()
         self.spotipy = Spotify(c1, c2)
         self.song_db = mongo #DATABASE OF UNIQUE SONGS
-        self.countries = {
-        "au": "australia",
-        "ar": "argentina",
-        "at": "austria",
-        "be": "belgium",
-        "bg": "bulgaria",
-        "br": "brazil",
-        "ca": "canada",
-        #"cl": "chile",
-        "co": "colombia",
-        "ch": "switzerland",
-        "cz": "czech_republic",
-        "dk": "denmark",
-        "de": "germany",
-        "es": "spain",
-        #"ec": "ecuador",
-        "ee": "estonia",
-        "fi": "finland",
-        "fr": "france",
-        "gr": "greece",
-        "gb": "united_kingdom",
-        "hu": "hungary",
-        "hk": "hong_kong",
-        #"id": "indonesia",
-        "in": "india",
-        #"is": "iceland",
-        "ie": "ireland",
-        "il": "israel",
-        "it": "italy",
-        "lt": "lithuania",
-        #"lu": "luxembourg",
-        "lv": "latvia",
-        "jp": "japan",
-        "mx": "mexico",
-        "my": "malaysia",
-        "nl": "netherlands",
-        "no": "norway",
-        "nz": "new_zealand",
-        "pl": "poland",
-        "pt": "portugal",
-        "ph": "philippines",
-        # "py": "paraguay",
-        "ro": "romania",
-        "ru": "russia",
-        "sg": "singapore",
-        "se": "sweden",
-        #"sk": "slovakia",
-        "th": "thailand",
-        "tr": "turkey",
-        "tw": "taiwan",
-        "ua": "ukraine",
-        "uy": "uruguay",
-        "us": "united_states",
-        "vn": "vietnam",
-        "za": "south_africa"
-    }
+        self.countries = dic_countries #Dictionary of code - country
 
 
 

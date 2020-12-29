@@ -1,39 +1,19 @@
 import pandas as pd
 import requests
-
+import maths
 import time
 from datetime import timedelta, datetime, date
-
-
+from threading import Thread
+import queue
 
 
 class Downloader():
 
 
 
-    def __init__(self):
-        self.country_codes= [
-                        'AR', 'AU', 'AT',
-                        'BE', 'BR', 'BG',
-                        'CA', 'CO', 'CZ', 'CH',
-                        'DK', 'DE',
-                        'ES', 'EE',
-                        'FI', 'FR',
-                        'GR', 'GB',
-                        'HK', 'HU',
-                        'IS', 'IE', 'IT', 'IL', 'IN',
-                        'JP',
-                        'LV', 'LT',
-                        'MY', 'MX',
-                        'NL', 'NZ', 'NO',
-                        'PH', 'PL', 'PT',
-                        'RO', 'RU',
-                        'SG', 'SE',
-                        'TW', 'TR', 'TH',
-                        'US', 'UY', 'UA',
-                        'VN',
-                        'ZA'
-                        ]
+    def __init__(self, countries):
+
+        self.country_codes = countries # list of country codes
 
 
 
@@ -85,11 +65,51 @@ class Downloader():
         return df
 
     def mos(self, df, week):
-        for code in self.country_codes:
-            df = df.append(self.mos_single(code, week))
-            print('done '+ code)
+        # for code in self.country_codes:
+        #     df = df.append(self.mos_single(code, week))
+        #     print('done '+ code)
+        # return df
+        q = queue.Queue()
+        threads_list = []
+        n_threads = 4  
+        for l_codes in self.split_array(self.country_codes, n_threads):
+            threads_list.append(Thread(target=lambda q, arg1, arg2: q.put(self.mos_group(arg1, arg2)), args=(q, l_codes, week)))
+
+        # for code in self.country_codes:
+        #     threads_list.append(Thread(target=lambda q, arg1, arg2: q.put(self.mos_single(arg1, arg2)), args=(q, code, week)))
+
+        for t in threads_list:
+            t.start()
+        for t in threads_list:
+            t.join()
+
+
+        for i in q.get():
+            if df is None:
+                df = i
+            else:
+                df = pd.concat([df, i])
+        while not q.empty():
+            for i in q.get():
+                df = pd.concat([df, i])
+
+        df = df.reset_index()
+        del df['index']
         return df
 
+    def mos_group(self, codes, week):
+        dfs = [self.mos_single(code,week) for code in codes]
+        print('done' + str(codes))
+        return dfs
+
+    def split_array(self, arr, ts):
+
+        n = math.ceil(len(arr)/ts)
+        a = []
+        for i in range(0,ts):
+            a.append(arr[i*n:n+i*n])
+        
+        return a
 
 
 

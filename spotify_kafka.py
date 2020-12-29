@@ -5,18 +5,19 @@ import time
 from spotify_package.database._Mongo import *
 from spotify_package._SpotiModelling import *
 from spotify_package._Downloader import *
-from variables import get_weeks
+from variables import *
 
 #INIT 
-mongo = Mongo('DBtest1')
+mongo = Mongo(db_name())
 
 def get_spotify_producer():
   producer = KafkaProducer(
     bootstrap_servers=['localhost:9092'],
     value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
-  downloader = Downloader()
-  weeks = get_weeks()
+  countries = spotify_get_countries_code()
+  downloader = Downloader(countries)
+  weeks = get_weeks('spoti_weeks') #name collection weeks
 
   for week in weeks:
     #send to kafka queue
@@ -36,7 +37,8 @@ def send_queue(producer, df):
 
 def get_spotify_consumer():
 
-  spoty_side = SpotiModelling(mongo)
+  dic_countries = spotify_codes_countries()
+  spoty_side = SpotiModelling(mongo, dic_countries)
   consumer = KafkaConsumer(
     bootstrap_servers=['localhost:9092'],
     auto_offset_reset='latest',

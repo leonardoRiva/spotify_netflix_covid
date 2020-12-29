@@ -278,6 +278,12 @@ def spotify_codes_countries():
         dict[code] = COMMON_COUNTRIES[code]['spotify']
     return dict
 
+# return list of codes
+def spotify_get_countries_code():
+    arr = []
+    for code in COMMON_COUNTRIES:
+      arr.append(code)
+    return arr
 
 # questi li toglierei..
 
