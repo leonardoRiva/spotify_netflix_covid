@@ -9,12 +9,6 @@ import json
 import time
 
 
-# connessione a mongo
-client = pymongo.MongoClient("mongodb://localhost:27017/")
-db = client[db_name()]
-collection = db['covid']  
-
-
 
 def get_covid_producer():
     # connessione a kafka come producer
@@ -24,8 +18,8 @@ def get_covid_producer():
 
     # classe per il download dei dati
     mob = Covid_Side()
-    weeks = get_weeks(collection)
-    print('Covid data downloaded')
+    weeks = get_weeks('covid')
+    print('[Covid] data downloaded')
 
     # invio dei documenti
     for w in weeks:
@@ -36,9 +30,7 @@ def get_covid_producer():
 
 
 
-
 def get_covid_consumer():
-
     # connessione a kafka come consumer
     consumer = KafkaConsumer(
         bootstrap_servers=['localhost:9092'],
@@ -49,8 +41,13 @@ def get_covid_consumer():
     # connessione al topic kafka
     consumer.subscribe(['covid'])
 
+    # connessione a mongo
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
+    db = client[db_name()]
+    collection = db['covid']  
+
     # in ascolto di nuovi messaggi sulla coda
     for msg in consumer:
         doc = msg.value
         collection.insert_one(doc)
-        print(doc['week'] + " covid document inserted correctly!")
+        print("[Covid] document inserted correctly! " + doc['week'])

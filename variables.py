@@ -1,23 +1,34 @@
 from datetime import datetime, timedelta
+import pymongo
 
 
-def get_weeks(collection):
-    # trova ultima settimana salvata sul db, per aggiungere solo le successive
-    try:
-        mydoc = collection.find({}, {'week': 1, '_id': 0}).sort('week',-1).limit(1)
-        last = mydoc[0]['week']
-    except:
-        last = '2020-08-03' # una settimana prima della 1°, perché poi sommo 7 giorni
-    weeks = []
-    i = datetime.strptime(last, '%Y-%m-%d') + timedelta(days=7)
-    while i < datetime.today():
-        weeks.append(datetime.strftime(i, '%Y-%m-%d'))
-        i = i + timedelta(days=7)
-    return weeks
+def get_weeks(collection_name):
+   # trova ultima settimana salvata sul db, per restituire un array con tutte i lunedì fino ad oggi
+   try:
+      client = pymongo.MongoClient("mongodb://localhost:27017/")
+      db = client[db_name()]
+      collection = db[collection_name]  
+      mydoc = collection.find({}, {'week': 1, '_id': 0}).sort('week',-1).limit(1)
+      last = mydoc[0]['week']
+   except:
+      last = '2020-08-03' # una settimana prima della 1°, perché poi sommo 7 giorni
+
+   # se non è lunedì, trova il primo successivo
+   i = datetime.strptime(last, '%Y-%m-%d') + timedelta(days=7)
+   while i.weekday() != 0:
+      i += timedelta(days=1)
+
+   # calcola tutti i lunedì
+   weeks = []
+   today = datetime.today()
+   while i < today:
+      weeks.append(datetime.strftime(i, '%Y-%m-%d'))
+      i += timedelta(days=7)
+   return weeks
 
 
 def db_name():
-    return 'testDB'
+   return 'testDB'
 
 # dizionario globale countries
 COMMON_COUNTRIES = {
@@ -259,68 +270,36 @@ COMMON_COUNTRIES = {
 }
 
 def netflix_countries_codes():
-    dict = {}
-    for code in COMMON_COUNTRIES:
-        dict[COMMON_COUNTRIES[code]['netflix']] = code
-    return dict
+   dict = {}
+   for code in COMMON_COUNTRIES:
+      dict[COMMON_COUNTRIES[code]['netflix']] = code
+   return dict
 
 # ritorna la stessa cosa di get_country_to_code_dict
 def covid_countries_codes():
-    dict = {}
-    for code in COMMON_COUNTRIES:
-        dict[COMMON_COUNTRIES[code]['covid']] = code
-    return dict
+   dict = {}
+   for code in COMMON_COUNTRIES:
+      dict[COMMON_COUNTRIES[code]['covid']] = code
+   return dict
 
 # ritorna la stessa cosa di get_code_to_country_dict()
 def spotify_codes_countries():
-    dict = {}
-    for code in COMMON_COUNTRIES:
-        dict[code] = COMMON_COUNTRIES[code]['spotify']
-    return dict
+   dict = {}
+   for code in COMMON_COUNTRIES:
+      dict[code] = COMMON_COUNTRIES[code]['spotify']
+   return dict
 
 # return list of codes
 def spotify_get_countries_code():
-    arr = []
-    for code in COMMON_COUNTRIES:
+   arr = []
+   for code in COMMON_COUNTRIES:
       arr.append(code)
-    return arr
-
-# questi li toglierei..
-
-def get_country_to_code_dict():
-    return {'argentina': 'ar', 'australia': 'au', 'austria': 'at', 'belgium': 'be',
-        'bulgaria': 'bg', 'brazil': 'br', 'canada': 'ca', 'switzerland': 'ch',
-        'colombia': 'co', 'czechia': 'cz', 'germany': 'de', 'denmark': 'dk',
-        'spain': 'es', 'estonia': 'ee', 'finland': 'fi', 'france': 'fr',
-        'united-kingdom': 'gb', 'greece': 'gr', 'hong-kong': 'hk', 'hungary': 'hu',
-        'india': 'in', 'ireland': 'ie', 'israel': 'il', 'italy': 'it', 'japan': 'jp',
-        'lithuania': 'lt', 'latvia': 'lv', 'mexico': 'mx', 'malaysia': 'my',
-        'netherlands': 'nl', 'norway': 'no', 'new-zealand': 'nz', 'philippines': 'ph',
-        'poland': 'pl', 'portugal': 'pt', 'romania': 'ro', 'russia': 'ru',
-        'singapore': 'sg', 'sweden': 'se', 'thailand': 'th', 'turkey': 'tr', 'taiwan': 'tw',
-        'ukraine': 'ua', 'uruguay': 'uy', 'united-states': 'us', 'vietnam': 'vn',
-        'south-africa': 'za'}
-
-def get_code_to_country_dict():
-    return {"au": "australia", "ar": "argentina", "at": "austria",
-        "be": "belgium", "bg": "bulgaria", "br": "brazil", "ca": "canada",
-        "co": "colombia", "ch": "switzerland", "cz": "czech_republic",
-        "dk": "denmark", "de": "germany", "es": "spain", "ee": "estonia",
-        "fi": "finland", "fr": "france", "gr": "greece", "gb": "united_kingdom",
-        "hu": "hungary", "hk": "hong_kong", "in": "india",
-        "ie": "ireland", "il": "israel", "it": "italy", "lt": "lithuania",
-        "lv": "latvia", "jp": "japan", "mx": "mexico", "my": "malaysia",
-        "nl": "netherlands", "no": "norway", "nz": "new_zealand",
-        "pl": "poland", "pt": "portugal", "ph": "philippines",
-        "ro": "romania", "ru": "russia", "sg": "singapore",
-        "se": "sweden", "th": "thailand", "tr": "turkey", "tw": "taiwan",
-        "ua": "ukraine", "uy": "uruguay", "us": "united_states",
-        "vn": "vietnam", "za": "south_africa"}
+   return arr
 
 
 
 def get_common_weeks_list():
-    return ['2020-08-10',
+   return ['2020-08-10',
             '2020-08-17',
             '2020-08-24',
             '2020-08-31',

@@ -16,8 +16,8 @@ producers = []
 consumers.append(Thread(target=get_spotify_consumer))
 producers.append(Thread(target=get_spotify_producer))
 
-#consumers.append(Thread(target=get_covid_consumer))
-#producers.append(Thread(target=get_covid_producer))
+consumers.append(Thread(target=get_covid_consumer))
+producers.append(Thread(target=get_covid_producer))
 
 
 for c in consumers:

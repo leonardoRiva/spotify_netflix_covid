@@ -87,24 +87,21 @@ class Downloader():
         for t in threads_list:
             t.join()
 
-
-        for i in q.get():
-            if df is None:
-                df = i
-            else:
-                df = pd.concat([df, i])
-        while not q.empty():
+        try:
             for i in q.get():
-                df = pd.concat([df, i])
-
-        df = df.reset_index()
-        del df['index']
-        return df
+                if df is None:
+                    df = i
+                else:
+                    df = pd.concat([df, i])
+            df = df.reset_index()
+            del df['index']
+            return df
+        except:
+            return pd.DataFrame()
 
     def mos_group(self, codes, week):
         dfs = [self.mos_single(code,week) for code in codes]
-        print(week)
-        print('done' + str(codes))
+        print('[Spotify] downloaded: ' + week + ' -> ' + str(codes))
         return dfs
 
     def split_array(self, arr, ts):

@@ -6,7 +6,6 @@ from spotify_package.database._Mongo import *
 from spotify_package._SpotiModelling import *
 from spotify_package._Downloader import *
 from variables import *
-import sys
 
 #INIT 
 mongo = Mongo(db_name())
@@ -29,7 +28,6 @@ def get_spotify_producer():
 
 def send_queue(producer, df):
   #send to kafka queue
-  print(sys.getsizeof(df))
   producer.send(topic='spotify', value=df) # invia i dati alla coda
   time.sleep(0.2) # senza lo sleep non va, senza motivo
 
@@ -54,9 +52,11 @@ def get_spotify_consumer():
   consumer.subscribe(['spotify'])
 
   for msg in consumer:
-    print("Kafka consumed")
-    #print(msg.value)
-    model = spoty_side.get_week(msg.value)# query a spotify
-    mongo.store_week(model)# upload su mongo
-    print("Document inserted correctly!")
+    print("[Spotify] kafka consumed")
+    if len(msg.value) > 2:
+      model = spoty_side.get_week(msg.value)# query a spotify
+      mongo.store_week(model)# upload su mongo
+      print("[Spotify] document inserted correctly!")
+    else:
+      print('[Spotify] week not present on spotify charts')
     
