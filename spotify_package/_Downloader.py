@@ -5,20 +5,18 @@ import time
 from datetime import timedelta, datetime, date
 from threading import Thread
 import queue
+import numpy as np
 
 
 class Downloader():
 
-
-
     def __init__(self, countries):
-
         self.country_codes = countries # list of country codes
-
 
 
     def build_url(self, nation, week):
         return "https://spotifycharts.com/regional/" + nation + "/weekly/" + week + "/download"
+
 
     def get_week_format(self, day):
         d = datetime.strptime(day, '%Y-%m-%d')
@@ -32,6 +30,7 @@ class Downloader():
         date_week = prev_day + '--' + next_day
         return date_week
 
+
     def download(self, nation, week):
         url = self.build_url(nation, week)
         req = requests.get(url)
@@ -40,7 +39,6 @@ class Downloader():
             return url_content
         else:
             return False
-
 
 
     def mos_single(self, n, w):
@@ -53,7 +51,6 @@ class Downloader():
         df = pd.read_csv('temp.csv', quotechar='"', names=["Position","Track_Name",
                                                             "Artist","Streams","URL"],
                         index_col=False)
-
         # print(n)
         # print(df.iloc[0])
         # print(df.iloc[1])
@@ -65,63 +62,47 @@ class Downloader():
         df['week_from'] = w.split("--")[0]
         df['week_to'] = w.split("--")[1]
         df['country'] = n
-
         return df
 
+
     def mos(self, df, week):
-        # for code in self.country_codes:
-        #     df = df.append(self.mos_single(code, week))
-        #     print('done '+ code)
-        # return df
         q = queue.Queue()
         threads_list = []
-        n_threads = 4  
-        for l_codes in self.split_array(self.country_codes, n_threads):
+        n_threads = 8
+        splitted_codes = [list(x) for x in np.array_split(self.country_codes, n_threads)]
+        for l_codes in splitted_codes:
             threads_list.append(Thread(target=lambda q, arg1, arg2: q.put(self.mos_group(arg1, arg2)), args=(q, l_codes, week)))
-
-        # for code in self.country_codes:
-        #     threads_list.append(Thread(target=lambda q, arg1, arg2: q.put(self.mos_single(arg1, arg2)), args=(q, code, week)))
 
         for t in threads_list:
             t.start()
         for t in threads_list:
             t.join()
 
-        try:
-            for i in q.get():
-                if df is None:
-                    df = i
-                else:
-                    df = pd.concat([df, i])
+        l = [] # queue to list
+        while not q.empty():
+            x = q.get()
+            l.append(x)
+        l = [item for sublist in l for item in sublist] # flattening the list
+
+        try: # concat the dfs
+            df = pd.concat(l)
             df = df.reset_index()
             del df['index']
             return df
         except:
-            return pd.DataFrame()
+            return pd.DataFrame() # empty dataframe if week not in charts
+
 
     def mos_group(self, codes, week):
         dfs = [self.mos_single(code,week) for code in codes]
         print('[Spotify] downloaded: ' + week + ' -> ' + str(codes))
         return dfs
 
-    def split_array(self, arr, ts):
-
-        n = math.ceil(len(arr)/ts)
-        a = []
-        for i in range(0,ts):
-            a.append(arr[i*n:n+i*n])
-        
-        return a
-
-
-
 
     #main of class
     def get_data(self, day): #data of week X
-
         week = self.get_week_format(day)
         df = self.mos(pd.DataFrame(columns=["Position","Track_Name","Artist",
                                             "Streams","URL"]), week)
         df_json = df.to_json(orient='records')
-        #print(df_json)
         return df_json

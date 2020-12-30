@@ -193,8 +193,10 @@ class SpotiModelling():
         df = pd.read_json(df_json, orient='records')
         list_week_froms = df.week_from.unique()
         week = list_week_froms[0]
+        monday = datetime.strftime((datetime.strptime(week,'%Y-%m-%d') + timedelta(days=3)), '%Y-%m-%d')
+
         model = {
-            "week": week,
+            "week": monday,
             "spotify": self.model_week(df, week)
         }
 
