@@ -17,7 +17,7 @@ def get_weeks(collection):
 
 
 def db_name():
-    return 'progettoDB'
+    return 'testDB'
 
 # dizionario globale countries
 COMMON_COUNTRIES = {

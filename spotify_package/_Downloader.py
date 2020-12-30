@@ -1,6 +1,6 @@
 import pandas as pd
 import requests
-import maths
+import math
 import time
 from datetime import timedelta, datetime, date
 from threading import Thread
@@ -53,11 +53,15 @@ class Downloader():
         df = pd.read_csv('temp.csv', quotechar='"', names=["Position","Track_Name",
                                                             "Artist","Streams","URL"],
                         index_col=False)
+
+        # print(n)
+        # print(df.iloc[0])
+        # print(df.iloc[1])
         df = df.drop([0,1], axis=0) #remove first two rows
+
         # for index, song in enumerate(df['URL']):
         #   song_id = song.split('/')[-1]
         #   df = add_features(df, index, song_id)
-        print(w)
         df['week_from'] = w.split("--")[0]
         df['week_to'] = w.split("--")[1]
         df['country'] = n
@@ -99,6 +103,7 @@ class Downloader():
 
     def mos_group(self, codes, week):
         dfs = [self.mos_single(code,week) for code in codes]
+        print(week)
         print('done' + str(codes))
         return dfs
 

@@ -28,8 +28,7 @@ class SpotiModelling():
 
 
     def get_week_data(self, df_songs, list_countries):
-        #df_week = df_songs[df_songs['week_from'] == week]
-        df_week = df_songs #dataframe has only one week
+        df_week = df_songs.dropna()#dataframe has only one week
         data = [self.get_week_country_data(df_week, country)
                 for country in list_countries]
 
@@ -70,7 +69,8 @@ class SpotiModelling():
 
     def add_unique_song_all(self, df):
         #get data from db if exists, otherwise None
-        query = [self.song_db.find_unique_song('songs', song['URL'].split('/')[-1]) for song in df]
+
+        query = [self.song_db.find_unique_song('songs', song['URL'].split('/')[-1]) for song in df if song['URL'] is not None] #rimuovere record vuoti (header dei dataset quando concat)
 
         none_songs = []
         for i, song in enumerate(query):#creates array of song_ids that are not in db
@@ -106,7 +106,8 @@ class SpotiModelling():
                 "index": song_index
             }
             songs.append(model)
-            index = index + song_index
+            if song_index is not None:
+                index = index + song_index
         #returns list of enhanced songs and total index of single country
         return songs, index/n
                 

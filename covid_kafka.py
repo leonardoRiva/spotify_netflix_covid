@@ -1,4 +1,4 @@
-from covid_package.mobility_v6 import Covid_Side
+from covid_package._mobility import Covid_Side
 from datetime import datetime, timedelta
 from variables import get_weeks
 from kafka import KafkaProducer
