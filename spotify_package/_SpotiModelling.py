@@ -11,6 +11,8 @@ from datetime import timedelta, datetime, date
 
 from spotify_package._keys import get_credentials
 
+from numpy import mean, median
+ 
 
 
 
@@ -47,13 +49,16 @@ class SpotiModelling():
         #index_spotify = self.create_index(songs)
 
         #MULTI SONG
-        songs, index_spotify = self.add_unique_song_all(parsed)
-
+        songs, indexs_spotify = self.add_unique_song_all(parsed)
+        mean_index = mean(indexs_spotify)
+        median_index = median(indexs_spotify)
+ 
         #country_name = self.code_to_country(country.lower())
         country_name = country.lower()
         model = {
             "songs": songs,
-            "spotify_index": index_spotify,
+            "mean_spotify_index": mean_index,
+            "median_spotify_index": median_index
         }
 
         return {country_name: model}
@@ -84,20 +89,19 @@ class SpotiModelling():
             q = q + self.spotipy.get_tracks_feature(l)
 
 
-        index = 0
+        indexs = []
         songs = []
-        n = 0
+        to_store = []
         for i, song in enumerate(query):#adds features to new songs
             song_index = None
             if song is None:
                 features = q.pop(0)#removes first
-                if features is not None:
-                    self.song_db.store_song(df[i], features)
+                if features is not None: # features of that song dont exist
+                    to_store.append([df[i], features])
+                    #self.song_db.store_song(df[i], features)
                     song_index = features['valence'] + features['danceability'] + features['energy']
-                    n = n + 1
             else:
                 song_index = song['features']['valence'] + song['features']['danceability'] + song['features']['energy']
-                n = n + 1
             
             model = {
                 "id": df[i]['URL'].split('/')[-1],
@@ -107,66 +111,54 @@ class SpotiModelling():
             }
             songs.append(model)
             if song_index is not None:
-                index = index + song_index
+                indexs.append(song_index)
+        if len(to_store) > 0:
+            self.song_db.store_songs(to_store) #stores all new songs w/ features
         #returns list of enhanced songs and total index of single country
-        return songs, index/n
+        return songs, indexs
                 
-        
-
-
+    ##############DISMISSED###################
     
-    def add_unique_song(self, song_id, song):
-        #check if song_id exist in collection songs
+    # def add_unique_song(self, song_id, song):
+    #     #check if song_id exist in collection songs
 
-        query = self.song_db.find_unique_song('songs', song_id)
-        if (query is None):  # else add song
-            features = self.spotipy.get_track_feature(song_id)
-            if features is None: # not save in db
-                # features = {
-                #     'danceability': 0,
-                #     'energy': 0,
-                #     'loudness': 0,
-                #     'mode': 0,
-                #     'speechiness': 0,
-                #     'acousticness': 0,
-                #     'instrumentalness': 0,
-                #     'liveness': 0,
-                #     'valence': 0,
-                #     'tempo': 0
-                # }
-                index = None
-            else:
-                index = features['valence'] + features['danceability'] + features['energy']
-                self.song_db.store_song(song, features)
-            return index
-        else:
-            index = query['features']['valence'] + query['features']['danceability'] + query['features']['energy']
-            return index
+    #     query = self.song_db.find_unique_song('songs', song_id)
+    #     if (query is None):  # else add song
+    #         features = self.spotipy.get_track_feature(song_id)
+    #         if features is None: # not save in db
+    #             index = None
+    #         else:
+    #             index = features['valence'] + features['danceability'] + features['energy']
+    #             self.song_db.store_song(song, features)
+    #         return index
+    #     else:
+    #         index = query['features']['valence'] + query['features']['danceability'] + query['features']['energy']
+    #         return index
 
-    def create_song(self, song):
-        song_id = song['URL'].split('/')[-1]
-        index = self.add_unique_song(song_id, song)
-        model = {
-            "id": song_id,
-            "streams": song['Streams'],
-            "position": song['Position'],
-            "index": index
-        }
-        return model
+    # def create_song(self, song):
+    #     song_id = song['URL'].split('/')[-1]
+    #     index = self.add_unique_song(song_id, song)
+    #     model = {
+    #         "id": song_id,
+    #         "streams": song['Streams'],
+    #         "position": song['Position'],
+    #         "index": index
+    #     }
+    #     return model
 
-    def create_index(self, songs):
-        index = 0
-        n = 0
-        for song in songs:
-            if song['index'] is not None:
-                index = index + song['index']
-                n = n + 1
+    # def create_index(self, songs):
+    #     index = 0
+    #     n = 0
+    #     for song in songs:
+    #         if song['index'] is not None:
+    #             index = index + song['index']
+    #             n = n + 1
 
-        index = index/n
-        return index
+    #     index = index/n
+    #     return index
 
 
-
+######################################
 
 
     def get_country_codes(self):

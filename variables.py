@@ -28,7 +28,16 @@ def get_weeks(collection_name):
 
 
 def db_name():
-   return 'progettoDB'
+   return 'progettoDB' 
+
+def spotify_collection_name():
+   return 'spoti_weeks'
+
+def covid_collection_name(): #cambiare nome
+   return 'covid_weeks'
+
+def netflix_collection_name(): #cambiare nome
+   return 'netfli_weeks'
 
 # dizionario globale countries
 COMMON_COUNTRIES = {
