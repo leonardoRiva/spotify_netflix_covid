@@ -18,7 +18,7 @@ def get_covid_producer():
 
     # classe per il download dei dati
     mob = Covid_Side()
-    weeks = get_weeks('covid')
+    weeks = get_weeks(covid_collection_name())
     print('[Covid] data downloaded')
 
     # invio dei documenti
@@ -43,8 +43,7 @@ def get_covid_consumer():
 
     # connessione a mongo
     client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client[db_name()]
-    collection = db['covid']  
+    collection = client[db_name()][covid_collection_name()]  
 
     # in ascolto di nuovi messaggi sulla coda
     for msg in consumer:

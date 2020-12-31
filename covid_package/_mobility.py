@@ -1,7 +1,6 @@
 import pandas as pd
 import sys, os
 import math
-sys.path.append(os.path.abspath(os.path.join('..', 'config'))) # to import files outside the package
 from variables import *
 
 class Covid_Side:
