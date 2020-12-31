@@ -44,8 +44,8 @@ def plot_sent_mean(plot):
         return None
 
 def set_week_days(week, fromto=""):
-    d = "2020-W"+str(week)
-    date = datetime.datetime.strptime(d + '-1', "%Y-W%W-%w")
+    d = "2020-W"+str(int(float(week)))+'-1'
+    date = datetime.datetime.strptime(d, "%Y-W%W-%w")
     if fromto == "from":
         from_day = date + timedelta(days=-7)
         return str(from_day.date())

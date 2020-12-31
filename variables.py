@@ -7,7 +7,7 @@ def get_weeks(collection_name):
    try:
       client = pymongo.MongoClient("mongodb://localhost:27017/")
       db = client[db_name()]
-      collection = db[collection_name]  
+      collection = db[collection_name]
       mydoc = collection.find({}, {'week': 1, '_id': 0}).sort('week',-1).limit(1)
       last = mydoc[0]['week']
    except:
@@ -28,7 +28,7 @@ def get_weeks(collection_name):
 
 
 def db_name():
-   return 'testDB'
+   return 'progettoDB'
 
 # dizionario globale countries
 COMMON_COUNTRIES = {

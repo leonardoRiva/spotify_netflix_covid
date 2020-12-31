@@ -18,6 +18,7 @@ import pymongo as pymdb
 from imdb import IMDb
 from textblob import TextBlob
 from . _Movies_DB import Movies_DB
+import concurrent.futures
 
 class IMDB_Interface():
     """
@@ -28,13 +29,13 @@ class IMDB_Interface():
     def __init__(self, movie_db):
         self.ia = IMDb()
         self.MDB = movie_db
-        #client = pymdb.MongoClient('localhost:27017')
-        #self.movie_db = MDB.get_db()
-        #self.movie_db = client.movies_db
-        # mdb = Movies_DB()
-        # self.movie_db = mdb.get_db()
 
 #------------------------------------------------------------------------------#
+
+    def process_title(self, dfi, title):
+        id = self.get_movie_key(title)
+        minfo = self.get_movies_infos([id])
+        return dfi, minfo
 
     def get_movie_key(self, title):
         if title != '':
@@ -59,7 +60,6 @@ class IMDB_Interface():
                 movie = None
                 stored = False
                 mov = self.MDB.find_movie(m_key)
-                #mov = self.movie_db.movies.find({"_id": m_key})
                 if mov.count() == 1:
                     print("found local")
                     stored = True
@@ -80,7 +80,6 @@ class IMDB_Interface():
                 [out[k].append(movie[k]) for k in out]
                 if not stored:
                     self.MDB.store_movie(movie["_id"], movie["title"], movie["genres"], movie["keywords"], movie["plot outline"])
-                    #self.movie_db.movies.insert_one({"_id":movie["_id"], "title":movie["title"], "genres":movie["genres"].split(), "keywords":movie["keywords"].split(), "plot outline":movie["plot outline"]})
             else:
                 [out[k].append('') for k in out]
         return out
@@ -93,12 +92,24 @@ class IMDB_Interface():
 
     def preprocess_df(self, df):
         titles = df["title"].tolist()
+        df[['_id','genres','keywords','plot outline']] = ''
         print("get movie keys from imdb...")
-        ids = [self.get_movie_key(t) for t in titles]
-        data_from_imdb = self.get_movies_infos(ids)
-        for k in data_from_imdb:
-            df[k] = data_from_imdb[k]
-        return df
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+             res_future = list(map(lambda it,t: executor.submit(self.process_title, it, t), range(0,10),titles))
+             for rf in concurrent.futures.as_completed(res_future):
+                 idx, imdb_info = rf.result()
+                 for k in imdb_info:
+                     df.loc[idx,k] = imdb_info[k][0]
+             return df
+
+    # def preprocess_df(self, df):
+    #     titles = df["title"].tolist()
+    #     print("get movie keys from imdb...")
+    #     ids = [self.get_movie_key(t) for t in titles]
+    #     data_from_imdb = self.get_movies_infos(ids)
+    #     for k in data_from_imdb:
+    #         df[k] = data_from_imdb[k]
+    #     return df
 
 #------------------------------------------------------------------------------#
 

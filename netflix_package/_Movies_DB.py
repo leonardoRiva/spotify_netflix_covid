@@ -21,7 +21,7 @@ class Movies_DB():
         movie_docs = [self.movie_subdoc(week_df.iloc[r]) for r in range(len(week_df))]
         week_doc = self.db.netflix_chart.find({"week":week}).limit(1)
         if week_doc.count() == 1:
-            if self.db.netflix_chart.find({"netflix."+country_code : {"$exists": True}}).count() == 0:
+            if self.db.netflix_chart.find({"week":week, "netflix."+country_code : {"$exists": True}}).count() == 0:
                 self.db.netflix_chart.update({"week":week}, {"$set": {"netflix."+country_code : self.country_subdoc(country_code, movie_docs)[country_code]}})
         else:
             week_doc = self.week_doc(week, country_code, movie_docs)

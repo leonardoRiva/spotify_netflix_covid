@@ -8,6 +8,7 @@ import json
 import time
 import variables as GLV
 from threading import Thread
+import concurrent.futures
 
 #------------------------------------------------------------------------------#
 
@@ -162,12 +163,21 @@ def get_netflix_producer():
         bootstrap_servers=['localhost:9092'],
         value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
-    for ic,c in enumerate(countries):
-        for w in weeks[0:3]:
-            scraped_data = FP_Scraper.get_weeks_chart(w, c)
-            producer.send(topic='netflix', value=scraped_data.to_json()) # invia i dati alla coda
-            print("send netflix scraped week: " + w + ", country: " + c)
-            time.sleep(0.1) # senza lo sleep non va, senza motivo
+    for w in weeks[3:6]:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+             res_future = list(map(lambda c: executor.submit(FP_Scraper.get_weeks_chart, w, c), countries))
+             for rf in concurrent.futures.as_completed(res_future):
+                 sdf = rf.result()
+                 producer.send(topic='netflix', value=sdf.to_json()) # invia i dati alla coda
+                 print("send netflix scraped week: " + w + ", country: " + sdf["country"][0])
+                 time.sleep(0.1) # senza lo sleep non va, senza motivo
+
+    # for ic,c in enumerate(countries):
+    #     for w in weeks[0:3]:
+    #         scraped_data = FP_Scraper.get_weeks_chart(w, c)
+    #         producer.send(topic='netflix', value=scraped_data.to_json()) # invia i dati alla coda
+    #         print("send netflix scraped week: " + w + ", country: " + c)
+    #         time.sleep(0.1) # senza lo sleep non va, senza motivo
 
 #------------------------------------------------------------------------------#
 
@@ -187,7 +197,7 @@ def get_netflix_consumer():
         df = pd.read_json(msg.value)
         df_full = NF_Side.enrich_df(df)
         MDB.store_week(df_full)
-        print("\n\n" + "netflix processed: \n" + str(df_full) + "\n\n")
+        print("\n\n" + "netflix consumed: \n" + str(df_full) + "\n\n")
 
 #------------------------------------------------------------------------------#
 
@@ -198,5 +208,4 @@ if __name__ == "__main__":
     tc.start()
     tp.start()
 
-    tp.join()
     tc.join()
