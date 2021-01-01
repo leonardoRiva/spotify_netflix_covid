@@ -2,6 +2,7 @@ from threading import Thread
 from netflix_kafka import *
 from spotify_kafka import *
 from covid_kafka import *
+from merger import Merger
 import json
 import time
 
@@ -10,14 +11,16 @@ import time
 consumers = []
 producers = []
 
+merger = Merger()
+
 #consumers.append(Thread(target=get_netflix_consumer))
 #producers.append(Thread(target=get_netflix_producer))
 
 # consumers.append(Thread(target=get_spotify_consumer))
 # producers.append(Thread(target=get_spotify_producer))
 
-# consumers.append(Thread(target=get_covid_consumer))
-# producers.append(Thread(target=get_covid_producer))
+consumers.append(Thread(target=get_covid_consumer, args=(merger,)))
+producers.append(Thread(target=get_covid_producer))
 
 
 for c in consumers:

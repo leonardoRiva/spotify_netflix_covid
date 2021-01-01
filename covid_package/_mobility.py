@@ -130,28 +130,21 @@ class Covid_Side:
         return round(v, 2)+0
 
 
-    def get_week_docs(self, week):
-        # returns two jsons (mobility and normalized mobility)
-        tmp = self.df[self.df['date']==week]
-        doc = {}
-        doc_norm = {}
-        countries = list(tmp['country'])
-        mobilities = list(tmp['mobility'])
-        mobilities_norm = list(tmp['mobility_norm'])
-        country_dict = covid_countries_codes()
-        for i in range(0, len(countries)):
-            c = countries[i].lower().replace(' ', '-')
-            if c in country_dict:
-                doc[country_dict[c]] = mobilities[i]
-                doc_norm[country_dict[c]] = mobilities_norm[i]
-        return doc, doc_norm
 
-
-    def get_week_doc_complete(self, week):
+    def get_week_doc(self, week):
         # returns the final json to be uploaded to mongodb
         if week in set(self.df['date']):
-            doc, doc_norm = self.get_week_docs(week)
-            tmp = {'week': week, 'mobility': doc, 'mobility_norm': doc_norm}
-            return tmp
+            tmp = self.df[self.df['date']==week]
+            doc = {}
+            countries = list(tmp['country'])
+            mobilities = list(tmp['mobility'])
+            mobilities_norm = list(tmp['mobility_norm'])
+            country_dict = covid_countries_codes()
+            for i in range(len(countries)):
+                c = countries[i].lower().replace(' ', '-')
+                if c in country_dict:
+                    doc[country_dict[c]] = {'mobility_abs_value': mobilities[i], 'mobility_index': mobilities_norm[i]}
+            final = {'week': week, 'mobility': doc}
+            return final
         else:
             return ''
