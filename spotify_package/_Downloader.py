@@ -50,7 +50,7 @@ class Downloader():
         csv_file = open(filename, 'wb') # creates temp file
         csv_file.write(dd)
         csv_file.close()
-        df = pd.read_csv('temp.csv', quotechar='"', names=["Position","Track_Name",
+        df = pd.read_csv(filename, quotechar='"', names=["Position","Track_Name",
                                                             "Artist","Streams","URL"],
                         index_col=False)
         os.remove(filename) # delete temp file
