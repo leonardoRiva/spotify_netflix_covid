@@ -3,6 +3,7 @@ import pymongo
 
 
 def get_weeks(collection_name):
+
    # trova ultima settimana salvata sul db, per restituire un array con tutte i lunedì fino ad oggi
    try:
       client = pymongo.MongoClient("mongodb://localhost:27017/")

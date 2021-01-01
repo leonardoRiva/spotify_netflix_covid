@@ -22,8 +22,6 @@ class Mongo():
     def store_song(self, song, features):
         doc = self.models.song_model(song, features)
         return self.store('songs', doc)
-        #TEST
-        #self.store('songs_v2', doc)
         
     def store_songs(self, songs):
         docs = [self.models.song_model(x[0], x[1]) for x in songs]

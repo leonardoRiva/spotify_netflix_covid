@@ -12,6 +12,7 @@ class Model():
             "song_id": song_id,
             "artist": song['Artist'],
             "track_name": song['Track_Name'],
+            "release_date": features['release_date'],
             "features":  {
                 "danceability": features['danceability'],
                 "acousticness": features['acousticness'],
