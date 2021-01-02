@@ -103,4 +103,5 @@ class Downloader():
         df = self.mos(pd.DataFrame(columns=["Position","Track_Name","Artist",
                                             "Streams","URL"]), week)
         df_json = df.to_json(orient='records')
+
         return df_json

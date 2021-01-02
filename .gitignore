@@ -1,4 +1,7 @@
 remove_songs.py
+db_queries.py
+debug.log
+
 
 /spotify_package/_keys.py
 

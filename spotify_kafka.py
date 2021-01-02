@@ -31,11 +31,6 @@ def send_queue(producer, df):
   producer.send(topic='spotify', value=df) # invia i dati alla coda
   time.sleep(0.2) # senza lo sleep non va, senza motivo
 
-# def save_to_file(dic):
-
-#     # print(dic)
-#     with open('filePROVA.txt', 'w') as file:
-#         file.write(json.dumps(dic))
 
 def get_spotify_consumer():
 
