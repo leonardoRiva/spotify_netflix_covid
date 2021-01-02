@@ -18,14 +18,19 @@ class Merger:
         client = pymongo.MongoClient("mongodb://localhost:27017/")
         self.db = client[db_name()]
         self.col = self.db[merged_collection_name()]
+        self.to_check = ['spotify', 'mobility']#, 'netflix']
+        self.collection_names = ['spoti_weeks', 'covid_weeks']#collection_names()
         self.init_collection()
 
 
 
     def init_collection(self):
         # se non esiste ancora una collection con i dati mergiati, la crea
-        n_documents = self.col.count_documents({})
-        if n_documents == 0:
+        n_merged_documents = self.col.count_documents({})
+        n_documents = 1
+        for c in self.collection_names:
+            n_documents *= self.db[c].count_documents({})
+        if n_merged_documents == 0 and n_documents > 0:
             print('[Merged] initializing collection')
             common_weeks = self.get_common_weeks()
             merged = self.merge_data(common_weeks)
@@ -38,7 +43,7 @@ class Merger:
     def get_common_weeks(self):
         # restituisce una lista con le settimane comuni a tutti e tre le collection
         weeks = {}
-        for col_name in collection_names():
+        for col_name in self.collection_names:
             col = self.db[col_name]
             mydoc = col.find({}, {'week': 1, '_id': 0}).sort('week',-1)
             weeks[col_name] = []
@@ -56,18 +61,24 @@ class Merger:
         final = []
 
         collections = []
-        for c in collection_names():
+        for c in self.collection_names:
             collections.append(self.db[c])
-        obj = ['spotify', 'mobility', 'netflix']
         
         for week in common_weeks:
             week_doc ={}
             for country in spotify_get_countries_code():
                 country_doc = {}
                 for i,col in enumerate(collections):
-                    result = (col.find({'week': week}, {obj[i]: 1, '_id': 0}))[0] # query
-                    index = result[obj[i]][country][obj[i]+'_index']
-                    country_doc[obj[i]] = index
+                    result = (col.find({'week': week}, {self.to_check[i]: 1, '_id': 0}))[0] # query
+
+                    if self.to_check[i] == 'spotify':
+                        index = result['spotify'][country]['median_index_no_recent']
+                    elif self.to_check[i] == 'mobility':
+                        index = result['mobility'][country]['mobility_index']
+                    elif self.to_check[i] == 'netflix':
+                        index = result['netflix'][country]['netflix_index']
+
+                    country_doc[self.to_check[i]] = index
                 week_doc[country] = country_doc
             final.append({'week': week, 'indexes': week_doc})
         return final
@@ -83,7 +94,7 @@ class Merger:
 
         # controlla se entrambe le altre due collection hanno questa settimana
         do = True
-        to_check = ['spotify', 'mobility', 'netflix']
+        to_check = self.to_check.copy()
         to_check.remove(side)
         col_names_dict = collection_names_dict()
         for n in to_check:

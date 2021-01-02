@@ -27,7 +27,8 @@ class Spotify():
 
 
     def merg(self, a,b):
-        a['release_date'] = b
+        if a is not None:
+            a['release_date'] = b
         return a
 
     def get_albums_date(self, ids):
@@ -46,8 +47,10 @@ class Spotify():
     def get_date(self, rel_date, precision):
 
         if precision == 'year':
+            if rel_date == '0000':
+                rel_date = '1800'
             return rel_date + '-01-01' #default to 1-1
-        else if precision == 'month':
+        elif precision == 'month':
             return rel_date + '-01' #default to 1
         else:
             return rel_date #.split('-')[0]
