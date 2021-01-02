@@ -46,6 +46,8 @@ class Spotify():
     def get_date(self, rel_date, precision):
 
         if precision == 'year':
-            return rel_date
+            return rel_date + '-01-01' #default to 1-1
+        else if precision == 'month':
+            return rel_date + '-01' #default to 1
         else:
-            return rel_date.split('-')[0]
+            return rel_date #.split('-')[0]

@@ -41,15 +41,20 @@ class SpotiModelling():
     def get_week_country_data(self, df_week, country):
 
         df = df_week[df_week['country'] == country]
+
+        week = df.week_from.unique()[0] # YYYY-MM-DD
+
         json_df = df.to_json(orient="records")
         parsed = json.loads(json_df)
+
+        
 
         #SINGLE SONG 
         #songs = [self.create_song(song) for song in parsed]
         #index_spotify = self.create_index(songs)
 
         #MULTI SONG
-        songs, indexs_all, indexs_no_recent = self.add_unique_song_all(parsed)
+        songs, indexs_all, indexs_no_recent = self.add_unique_song_all(parsed, week)
         if len(indexs_all) > 0:
             mean_index_all = mean(indexs_all)
             median_index_all = median(indexs_all)
@@ -87,7 +92,7 @@ class SpotiModelling():
         return a
 
 
-    def add_unique_song_all(self, df):
+    def add_unique_song_all(self, df, week):
         #get data from db if exists, otherwise None
 
         query = [self.song_db.find_unique_song('songs', song['URL'].split('/')[-1]) for song in df if song['URL'] is not None] #rimuovere record vuoti (header dei dataset quando concat)
@@ -117,11 +122,11 @@ class SpotiModelling():
                     #self.song_db.store_song(df[i], features)
                     
                     song_index_all = features['valence'] + features['danceability'] + features['energy']
-                    if features['release_date'] != '2020': #current YEAR TODO FIX 2021
+                    if self.is_song_old(features['release_date'], week): #if song is old
                         song_index_no_recent = song_index_all
             else:
                 song_index_all = song['features']['valence'] + song['features']['danceability'] + song['features']['energy']
-                if song['release_date'] != '2020': #current YEAR TODO FIX 2021
+                if self.is_song_old(song['release_date'], week): #if song is old
                     song_index_no_recent = song_index_all
             model = {
                 "id": df[i]['URL'].split('/')[-1],
@@ -140,6 +145,17 @@ class SpotiModelling():
         return songs, indexs_all, indexs_no_recent
                 
 
+    def is_song_old(self, rel_date, week):
+        d1 = datetime.strptime(rel_date, '%Y-%m-%d')
+        d2 = datetime.strptime(week, '%Y-%m-%d')
+
+        date_diff = d2-d1
+        days_diff = date_diff.days
+
+        if days_diff >= 90: #after 90days a song is declared as Old
+            return True
+        else:
+            return False
 
     def get_country_codes(self):
         return list(self.countries)
