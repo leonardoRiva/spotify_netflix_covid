@@ -61,11 +61,11 @@ class IMDB_Interface():
                 stored = False
                 mov = self.MDB.find_movie(m_key)
                 if mov.count() == 1:
-                    print("found local")
+                    # print("found local")
                     stored = True
                     movie = mov[0]
                 else:
-                    print("search imdb")
+                    # print("search imdb")
                     movie = self.ia.get_movie(m_key)
                     movie["_id"] = m_key
                     movie["keywords"] = self.get_keywords(m_key)
@@ -93,7 +93,7 @@ class IMDB_Interface():
     def preprocess_df(self, df):
         titles = df["title"].tolist()
         df[['_id','genres','keywords','plot outline']] = ''
-        print("get movie keys from imdb...")
+        # print("get movie keys from imdb...")
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
              res_future = list(map(lambda it,t: executor.submit(self.process_title, it, t), range(0,10),titles))
              for rf in concurrent.futures.as_completed(res_future):
@@ -101,15 +101,6 @@ class IMDB_Interface():
                  for k in imdb_info:
                      df.loc[idx,k] = imdb_info[k][0]
              return df
-
-    # def preprocess_df(self, df):
-    #     titles = df["title"].tolist()
-    #     print("get movie keys from imdb...")
-    #     ids = [self.get_movie_key(t) for t in titles]
-    #     data_from_imdb = self.get_movies_infos(ids)
-    #     for k in data_from_imdb:
-    #         df[k] = data_from_imdb[k]
-    #     return df
 
 #------------------------------------------------------------------------------#
 

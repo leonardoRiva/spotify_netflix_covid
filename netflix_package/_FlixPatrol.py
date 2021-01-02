@@ -37,7 +37,10 @@ class FlixPatrol():
         html = requests.get(url).text
         lines = html.split("\n")
         lines = [l.lstrip() for l in lines]
-        return lines
+        if '<div class="alert alert-darker">No data for selected period or region</div>' in lines:
+            return -1
+        else:
+            return lines
 
     def get_titles(self, lines):
         titles = []
@@ -69,6 +72,10 @@ class FlixPatrol():
 
         urls = [self.build_url(country, week) for country in countries]
         htmls_lines = [self.html_lines(url) for url in urls]
+
+        if type(htmls_lines) is int and htmls_lines==-1:
+            return -1
+
         week_titles = []
         for html_lines in htmls_lines:
             #print(html_lines[4])
@@ -93,8 +100,12 @@ class FlixPatrol():
             countries = self.all_countries
 
         for w in weeks:
-            df = df.append(self.get_week_chart(w, countries))
-            print("week n. " + str(w) + " downloaded")
+            single_week = self.get_week_chart(w, countries)
+            if type(single_week) is int and single_week == -1:
+                return -1;
+            else:
+                # print("week n. " + str(w) + " downloaded")
+                df = df.append(single_week)
         return df
 
 #------------------------------------------------------------------------------#

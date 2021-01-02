@@ -269,6 +269,10 @@ COMMON_COUNTRIES = {
    }
 }
 
+def get_country_codes():
+    codes = [code for code in COMMON_COUNTRIES]
+    return codes
+
 def netflix_countries_codes():
    dict = {}
    for code in COMMON_COUNTRIES:
@@ -291,12 +295,7 @@ def spotify_codes_countries():
 
 # return list of codes
 def spotify_get_countries_code():
-   arr = []
-   for code in COMMON_COUNTRIES:
-      arr.append(code)
-   return arr
-
-
+   return get_country_codes()
 
 def get_common_weeks_list():
    return ['2020-08-10',
