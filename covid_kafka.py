@@ -18,19 +18,21 @@ def get_covid_producer():
 
     # classe per il download dei dati
     mob = Covid_Side()
-    weeks = get_weeks('covid')
+    weeks = get_weeks(covid_collection_name())
     print('[Covid] data downloaded')
 
     # invio dei documenti
     for w in weeks:
-        downloaded_data = mob.get_week_doc_complete(w)
+        downloaded_data = mob.get_week_doc(w)
         if downloaded_data != '':
             producer.send(topic='covid', value=downloaded_data) # invia i dati alla coda
+        else:
+            print('[Covid] week not present in the dataset')
         time.sleep(0.2) # senza lo sleep non va, senza motivo
 
 
 
-def get_covid_consumer():
+def get_covid_consumer(merger):
     # connessione a kafka come consumer
     consumer = KafkaConsumer(
         bootstrap_servers=['localhost:9092'],
@@ -43,11 +45,11 @@ def get_covid_consumer():
 
     # connessione a mongo
     client = pymongo.MongoClient("mongodb://localhost:27017/")
-    db = client[db_name()]
-    collection = db['covid']  
+    collection = client[db_name()][covid_collection_name()]  
 
     # in ascolto di nuovi messaggi sulla coda
     for msg in consumer:
         doc = msg.value
         collection.insert_one(doc)
         print("[Covid] document inserted correctly! " + doc['week'])
+        merger.notify('mobility', doc['week'])

@@ -3,6 +3,7 @@ import pymongo
 
 
 def get_weeks(collection_name):
+
    # trova ultima settimana salvata sul db, per restituire un array con tutte i lunedì fino ad oggi
    try:
       client = pymongo.MongoClient("mongodb://localhost:27017/")
@@ -10,6 +11,7 @@ def get_weeks(collection_name):
       collection = db[collection_name]
       mydoc = collection.find({}, {'week': 1, '_id': 0}).sort('week',-1).limit(1)
       last = mydoc[0]['week']
+      client.close()
    except:
       last = '2020-08-03' # una settimana prima della 1°, perché poi sommo 7 giorni
 
@@ -28,7 +30,31 @@ def get_weeks(collection_name):
 
 
 def db_name():
-   return 'progettoDB'
+   return 'testDB' 
+
+def spotify_collection_name():
+   return 'spoti_weeks'
+
+def covid_collection_name(): #cambiare nome
+   return 'covid_weeks'
+
+def netflix_collection_name(): #cambiare nome
+   return 'netflix_chart'
+
+def merged_collection_name():
+   return 'merged_data'
+
+def collection_names():
+   return [spotify_collection_name(), covid_collection_name(), netflix_collection_name()]
+
+def collection_names_dict():
+   n = {}
+   n['spotify'] = spotify_collection_name()
+   n['mobility'] = covid_collection_name()
+   n['netflix'] = netflix_collection_name()
+   return n
+
+
 
 # dizionario globale countries
 COMMON_COUNTRIES = {

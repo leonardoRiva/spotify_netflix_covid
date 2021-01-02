@@ -1,6 +1,10 @@
 from spotify_package.database._Model import *
 from pymongo import MongoClient
 
+import sys, os
+sys.path.append(os.path.abspath(os.path.join('..', 'spotify_netflix_covid')))
+from variables import *
+
 class Mongo():
     """
     Class ch s occup del interazion load/store with th db mongo
@@ -12,25 +16,25 @@ class Mongo():
         self.models = Model()
         self.tweets = []
 
-    def store_song_old(self, song):
-        doc = self.models.song_model_old(song)
-        return self.store('songs', doc)
-
     def store_week(self, week):
-        self.store('spoti_weeks', week)
+        self.store(spotify_collection_name(), week)
 
     def store_song(self, song, features):
         doc = self.models.song_model(song, features)
         return self.store('songs', doc)
-        #TEST
-        #self.store('songs_v2', doc)
         
-        
+    def store_songs(self, songs):
+        docs = [self.models.song_model(x[0], x[1]) for x in songs]
+        return self.store_many('songs', docs)
+
+
+
     def store(self, collection, data):
-        #return self.db[collection].insert(data)
-        _id = self.db[collection].insert(data)
+        _id = self.db[collection].insert_one(data)
         return {**{'_id': _id}, **data}
-        
+    
+    def store_many(self, collection, data):
+        return self.db[collection].insert_many(data)
 
     def find_unique_song(self, collection, song_id):
         return self.db[collection].find_one({"song_id": song_id})

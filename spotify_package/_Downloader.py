@@ -6,7 +6,7 @@ from datetime import timedelta, datetime, date
 from threading import Thread
 import queue
 import numpy as np
-
+import os
 
 class Downloader():
 
@@ -45,20 +45,18 @@ class Downloader():
         dd = self.download(n.lower(), w)
         if not dd:
             return []
-        csv_file = open('temp.csv', 'wb')
+        filename = './temps/temp'+str(n)+str(w)+'.csv'
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        csv_file = open(filename, 'wb') # creates temp file
         csv_file.write(dd)
         csv_file.close()
-        df = pd.read_csv('temp.csv', quotechar='"', names=["Position","Track_Name",
+        df = pd.read_csv(filename, quotechar='"', names=["Position","Track_Name",
                                                             "Artist","Streams","URL"],
                         index_col=False)
-        # print(n)
-        # print(df.iloc[0])
-        # print(df.iloc[1])
+        os.remove(filename) # delete temp file
+  
         df = df.drop([0,1], axis=0) #remove first two rows
 
-        # for index, song in enumerate(df['URL']):
-        #   song_id = song.split('/')[-1]
-        #   df = add_features(df, index, song_id)
         df['week_from'] = w.split("--")[0]
         df['week_to'] = w.split("--")[1]
         df['country'] = n

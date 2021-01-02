@@ -21,7 +21,7 @@ def get_spotify_producer():
 
   countries = spotify_get_countries_code()
   downloader = Downloader(countries)
-  weeks = get_weeks('spoti_weeks') #name collection weeks
+  weeks = get_weeks(spotify_collection_name()) #name collection weeks
 
   [send_queue(producer, downloader.get_data(week)) for week in weeks]
 
