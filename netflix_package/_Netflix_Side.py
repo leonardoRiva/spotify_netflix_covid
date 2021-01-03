@@ -32,11 +32,16 @@ class Netflix_Side():
             df = self.add_plot_sent(df)
         return df
 
-    def enrich_df(self, df, add_weeks_date=True, sentiment="keywords"):
+    def enrich_df(self, df, add_weeks_date=True, sentiment="all"):
         df = self.IMDB.preprocess_df(df)
         if add_weeks_date:
             df = self.add_weeks_date(df)
-        if sentiment=="keywords":
+        if sentiment=='all':
+            df = self.add_kw_sent(df)
+            df = self.add_kw_sent(df, mode="mean")
+            df = self.add_plot_sent(df)
+            df = self.add_plot_sent(df, mode="mean")
+        elif sentiment=="keywords":
             df = self.add_kw_sent(df)
         elif sentiment=="plot":
             df = self.add_plot_sent(df)
@@ -53,36 +58,42 @@ class Netflix_Side():
     def add_kw_sent(self, df, mode="sum"):
         if "keywords" in df.columns:
             if mode=="sum":
-                df["kw_sent"] = df["keywords"].astype(str).apply(lambda kws: FS.kw_sent_sum(kws))
+                df["kw_sent_sum"] = df["keywords"].astype(str).apply(lambda kws: FS.kw_sent_sum(kws))
             elif mode=="mean":
-                df["kw_sent"] = df["keywords"].astype(str).apply(lambda kws: FS.kw_sent_mean(kws))
+                df["kw_sent_mean"] = df["keywords"].astype(str).apply(lambda kws: FS.kw_sent_mean(kws))
         return df
 
-    def add_plot_sent(df, mode="sum"):
+    def add_plot_sent(self, df, mode="sum"):
         if "plot outline" in df.columns:
             if mode=="sum":
-                df["plot_sent"] = df["plot outline"].astype(str).apply(lambda plot: plot_sent_sum(plot))
+                df["plot_sent_sum"] = df["plot outline"].astype(str).apply(lambda plot: FS.plot_sent_sum(plot))
             elif mode=="mean":
-                df["plot_sent"] = df["plot outline"].astype(str).apply(lambda plot: plot_sent_mean(plot))
+                df["plot_sent_mean"] = df["plot outline"].astype(str).apply(lambda plot: FS.plot_sent_mean(plot))
         return df
 
 #------------------------------------------------------------------------------#
 
-    def build_week_doc(self, df, sentiment_type="keywords"):
-        netflix_week_doc = {}
-        for c in FS.get_countries():
-            df_country = df[df['country']==c]
-            netflix_week_doc[FS.rename_country(c)] = self.build_week_indexes_subdoc(df_country)
-        return netflix_week_doc
-
-    def build_week_indexes_subdoc(self, df_country):
-        movie_keys = (df_country[df_country["_id"].notnull()]["_id"]).tolist()
-        sentiments = (df_country[df_country["kw_sent"].notnull()]["kw_sent"]).tolist() if "kw_sent" in df_country.columns else "no sentiment"
-        movies_docs = []
-        for i,k in enumerate(movie_keys):
-            movies_docs.append({
-                "id":movie_keys[i],
-                "position": i,
-                "keywords_sentiment":sentiments[i]
-            })
-        return movies_docs
+    # def build_week_doc(self, df, sentiment_type="keywords"):
+    #     netflix_week_doc = {}
+    #     for c in FS.get_countries():
+    #         df_country = df[df['country']==c]
+    #         netflix_week_doc[FS.rename_country(c)] = self.build_week_indexes_subdoc(df_country)
+    #     return netflix_week_doc
+    #
+    # def build_week_indexes_subdoc(self, df_country):
+    #     movie_keys = (df_country[df_country["_id"].notnull()]["_id"]).tolist()
+    #     list_kw_sent_sum = (df_country[df_country["kw_sent_sum"].notnull()]["kw_sent_sum"]).tolist() if "kw_sent_sum" in df_country.columns else "no kw_sent_sum"
+    #     list_kw_sent_mean = (df_country[df_country["kw_sent_mean"].notnull()]["kw_sent_mean"]).tolist() if "kw_sent_mean" in df_country.columns else "no kw_sent_mean"
+    #     list_plot_sent_sum = (df_country[df_country["plot_sent_sum"].notnull()]["plot_sent_sum"]).tolist() if "plot_sent_sum" in df_country.columns else "no plot_sent_sum"
+    #     list_plot_sent_mean = (df_country[df_country["plot_sent_mean"].notnull()]["plot_sent_mean"]).tolist() if "plot_sent_mean" in df_country.columns else "no plot_sent_mean"
+    #     movies_docs = []
+    #     for i,k in enumerate(movie_keys):
+    #         movies_docs.append({
+    #             "id": movie_keys[i],
+    #             "position": i,
+    #             "kw_sent_sum": list_kw_sent_sum[i],
+    #             "kw_sent_mean": list_kw_sent_mean[i],
+    #             "plot_sent_sum": list_plot_sent_sum[i],
+    #             "plot_sent_mean": list_plot_sent_mean[i]
+    #         })
+    #     return movies_docs

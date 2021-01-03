@@ -24,17 +24,26 @@ def get_netflix_producer():
         bootstrap_servers=['localhost:9092'],
         value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
-    for w in weeks[3:6]:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-             res_future = list(map(lambda c: executor.submit(FP_Scraper.get_weeks_chart, w, c), countries))
-             for rf in concurrent.futures.as_completed(res_future):
-                 if type(rf.result()) is int and rf.result()==-1:
-                     print("[NETFLIX] NO DATA AVALIABLE for week: " + w)
-                 else:
-                     sdf = rf.result()
-                     producer.send(topic='netflix', value=sdf.to_json()) # invia i dati alla coda
-                     print("[NETFLIX] send scraped week: " + w + ", country: " + sdf["country"][0])
-                 time.sleep(0.1) # senza lo sleep non va, senza motivo
+    for w in weeks:
+        country_queue=[]
+        for i,c in enumerate(countries):
+            country_queue.append(FP_Scraper.get_weeks_chart(w,c).to_json())
+            print("[NETFLIX] scraped week: " + w + ", country: "+ c)
+        print("\n" + "[NETFLIX] SEND ALL scraped week: " + w + "\n")
+        producer.send(topic='netflix', value={'week':w, 'countries': country_queue})
+
+    # for w in weeks[0:3]:
+    #     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+    #         res_future = list(map(lambda c: executor.submit(FP_Scraper.get_weeks_chart, w, c), countries))
+    #         for rf in concurrent.futures.as_completed(res_future):
+    #             if type(rf.result()) is int and rf.result()==-1:
+    #                 print("[NETFLIX] NO DATA AVALIABLE for week: " + w)
+    #             else:
+    #                 sdf = rf.result()
+    #                 producer.send(topic='netflix', value=sdf.to_json()) # invia i dati alla coda
+    #                 print("[NETFLIX] send scraped week: " + w + ", country: " + sdf["country"][0])
+    #         time.sleep(0.1) # senza lo sleep non va, senza motivo
+
 
 #------------------------------------------------------------------------------#
 
@@ -51,11 +60,18 @@ def get_netflix_consumer():
     consumer.subscribe(['netflix'])
 
     for msg in consumer:
-        df = pd.read_json(msg.value)
-        df_full = NF_Side.enrich_df(df)
-        MDB.store_week(df_full)
-        print("\n\n" + "[NETFLIX] consumed " + str(df_full['country'][0]) + ", week " + str(df_full['week'][0]) + "\n")
-        #print("\n" + str(df_full))
+        week = msg.value['week']
+        country_dfs = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            res_future = list(map(lambda cdf: executor.submit(NF_Side.enrich_df, pd.read_json(cdf)), msg.value['countries']))
+            for rf in concurrent.futures.as_completed(res_future):
+                df_full = rf.result()
+                country_dfs.append(df_full)
+                print("[NETFLIX] consumed " + str(df_full["country"][0]) + ", week " + str(week))
+
+        week_doc = MDB.store_week_doc(week, country_dfs) # !!!!!! MC LA TUA VARIABILE DI MERGINE è WEEK_DOC
+        print("\n" + "[NETFLIX] CONSUMED ALL week " + str(week) + "\n")
 
 #------------------------------------------------------------------------------#
 
