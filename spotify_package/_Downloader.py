@@ -22,7 +22,7 @@ class Downloader():
         d = datetime.strptime(day, '%Y-%m-%d')
         diffMonday = d.weekday()
         d = d + timedelta(days=-diffMonday)
-        s = d + timedelta(days=-3)
+        s = d + timedelta(days=-3) # friday -3 , thursday -4
         prev_day = str(s.date())
         d = datetime.strptime(prev_day, '%Y-%m-%d')
         d = d + timedelta(days=7)
@@ -44,7 +44,7 @@ class Downloader():
     def mos_single(self, n, w):
         dd = self.download(n.lower(), w)
         if not dd:
-            return []
+            return pd.DataFrame()
         filename = './temps/temp'+str(n)+str(w)+'.csv'
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         csv_file = open(filename, 'wb') # creates temp file
@@ -53,6 +53,7 @@ class Downloader():
         df = pd.read_csv(filename, quotechar='"', names=["Position","Track_Name",
                                                             "Artist","Streams","URL"],
                         index_col=False)
+
         os.remove(filename) # delete temp file
   
         df = df.drop([0,1], axis=0) #remove first two rows
@@ -81,6 +82,7 @@ class Downloader():
             x = q.get()
             l.append(x)
         l = [item for sublist in l for item in sublist] # flattening the list
+
 
         try: # concat the dfs
             df = pd.concat(l)

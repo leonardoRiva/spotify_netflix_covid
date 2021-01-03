@@ -29,6 +29,22 @@ def get_weeks(collection_name):
    return weeks
 
 
+def get_weeks_old():
+   last = '2018-08-03'
+   # se non è lunedì, trova il primo successivo
+   i = datetime.strptime(last, '%Y-%m-%d') + timedelta(days=7)
+   while i.weekday() != 0:
+      i += timedelta(days=1)
+
+   # calcola tutti i lunedì
+   weeks = []
+   today = datetime.strptime('2019-01-30', '%Y-%m-%d')
+   while i < today:
+      weeks.append(datetime.strftime(i, '%Y-%m-%d'))
+      i += timedelta(days=7)
+   return weeks
+   
+
 def db_name():
    return 'testDB' 
 

@@ -11,7 +11,7 @@ from datetime import timedelta, datetime, date
 
 from spotify_package._keys import get_credentials
 
-from numpy import mean, median
+
  
 
 
@@ -56,19 +56,24 @@ class SpotiModelling():
         #MULTI SONG
         songs, indexs_all, indexs_no_recent = self.add_unique_song_all(parsed, week)
         if len(indexs_all) > 0:
-            mean_index_all = mean(indexs_all)
-            median_index_all = median(indexs_all)
+            mean_index_all = np.mean(indexs_all)
+            median_index_all = np.median(indexs_all)
+            
         else:
             mean_index_all = None
             median_index_all = None
 
         if len(indexs_no_recent) > 0:
-            mean_index_no_recent = mean(indexs_no_recent)
-            median_index_no_recent = median(indexs_no_recent)
+            mean_index_no_recent = np.mean(indexs_no_recent)
+            median_index_no_recent = np.median(indexs_no_recent)
         else:
             mean_index_no_recent = None
             median_index_no_recent = None
  
+        min_index_all = np.min(indexs_all)
+        max_index_all = np.max(indexs_all)
+        min_indexs_no_recent = np.min(indexs_no_recent)
+        max_indexs_no_recent = np.max(indexs_no_recent)
         #country_name = self.code_to_country(country.lower())
         country_name = country.lower()
         model = {
@@ -77,6 +82,10 @@ class SpotiModelling():
             "median_index": median_index_all,
             "mean_index_no_recent": mean_index_no_recent,
             "median_index_no_recent": median_index_no_recent,
+            "min_all": min_index_all,
+            "max_all": max_index_all,
+            "min_no_recent": min_indexs_no_recent,
+            "max_no_recent": max_indexs_no_recent
         }
 
         return {country_name: model}
@@ -95,7 +104,7 @@ class SpotiModelling():
     def add_unique_song_all(self, df, week):
         #get data from db if exists, otherwise None
 
-        query = [self.song_db.find_unique_song('songs', song['URL'].split('/')[-1]) for song in df if song['URL'] is not None] #rimuovere record vuoti (header dei dataset quando concat)
+        query = [self.song_db.find_unique_song(song['URL'].split('/')[-1]) for song in df if song['URL'] is not None] #rimuovere record vuoti (header dei dataset quando concat)
 
         none_songs = []
         for i, song in enumerate(query):#creates array of song_ids that are not in db

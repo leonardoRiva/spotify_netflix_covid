@@ -24,7 +24,7 @@ def get_netflix_producer():
         bootstrap_servers=['localhost:9092'],
         value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
-    for w in weeks[3:6]:
+    for w in weeks: #[3:6] DAAAAAIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII (DA TENEERE)
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
              res_future = list(map(lambda c: executor.submit(FP_Scraper.get_weeks_chart, w, c), countries))
              for rf in concurrent.futures.as_completed(res_future):
@@ -38,7 +38,7 @@ def get_netflix_producer():
 
 #------------------------------------------------------------------------------#
 
-def get_netflix_consumer():
+def get_netflix_consumer(merger):
     MDB = Movies_DB(GLV)
     NF_Side = Netflix_Side(MDB)
 
@@ -55,6 +55,7 @@ def get_netflix_consumer():
         df_full = NF_Side.enrich_df(df)
         MDB.store_week(df_full)
         print("\n\n" + "[NETFLIX] consumed " + str(df_full['country'][0]) + ", week " + str(df_full['week'][0]) + "\n")
+        # merger.notify('netflix', df_full["week_from"][0]) #TODO FIX AFTER ALL 
         #print("\n" + str(df_full))
 
 #------------------------------------------------------------------------------#

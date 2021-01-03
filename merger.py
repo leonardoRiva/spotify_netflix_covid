@@ -18,8 +18,8 @@ class Merger:
         client = pymongo.MongoClient("mongodb://localhost:27017/")
         self.db = client[db_name()]
         self.col = self.db[merged_collection_name()]
-        self.to_check = ['spotify', 'mobility']#, 'netflix']
-        self.collection_names = ['spoti_weeks', 'covid_weeks']#collection_names()
+        self.to_check = ['spotify', 'mobility', 'netflix']
+        self.collection_names = collection_names() #['spoti_weeks', 'covid_weeks']
         self.init_collection()
 
 
@@ -54,6 +54,22 @@ class Merger:
         common_weeks = list(set.intersection(*map(set, l)))
         return common_weeks
 
+    def mongo_to_csv(self):
+        df = pd.DataFrame(columns=['country', 'week', 'spotify', 'mobility'])
+
+        result = self.col.find({})
+        for x in result:
+            week = x['week']
+            indexes = x['indexes']
+            for country in indexes:
+                spot_ind = indexes[country]['spotify']
+                mob_ind = indexes[country]['mobility']
+                #netflix
+                df.loc[len(df)] = [country, week, spot_ind, mob_ind]
+
+        # print(df)
+        df.to_csv('data.csv', index=False, sep=';')
+
 
 
     def merge_data(self, common_weeks):
@@ -70,14 +86,15 @@ class Merger:
                 country_doc = {}
                 for i,col in enumerate(collections):
                     result = (col.find({'week': week}, {self.to_check[i]: 1, '_id': 0}))[0] # query
-
-                    if self.to_check[i] == 'spotify':
-                        index = result['spotify'][country]['median_index_no_recent']
-                    elif self.to_check[i] == 'mobility':
-                        index = result['mobility'][country]['mobility_index']
-                    elif self.to_check[i] == 'netflix':
-                        index = result['netflix'][country]['netflix_index']
-
+                    try:
+                        if self.to_check[i] == 'spotify':
+                            index = result['spotify'][country]['median_index_no_recent']
+                        elif self.to_check[i] == 'mobility':
+                            index = result['mobility'][country]['mobility_index']
+                        elif self.to_check[i] == 'netflix':
+                            index = result['netflix'][country]['netflix_index']
+                    except:
+                        index = None
                     country_doc[self.to_check[i]] = index
                 week_doc[country] = country_doc
             final.append({'week': week, 'indexes': week_doc})

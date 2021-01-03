@@ -22,7 +22,7 @@ def get_spotify_producer():
   countries = spotify_get_countries_code()
   downloader = Downloader(countries)
   weeks = get_weeks(spotify_collection_name()) #name collection weeks
-
+  #weeks = get_weeks_old() #OLD WEEKS 2018-08 to 2019-01
   [send_queue(producer, downloader.get_data(week)) for week in weeks]
 
 
@@ -32,7 +32,7 @@ def send_queue(producer, df):
   time.sleep(0.2) # senza lo sleep non va, senza motivo
 
 
-def get_spotify_consumer():
+def get_spotify_consumer(merger=None):
 
   dic_countries = spotify_codes_countries()
   spoty_side = SpotiModelling(mongo, dic_countries)
@@ -52,6 +52,9 @@ def get_spotify_consumer():
       model = spoty_side.get_week(msg.value)# query a spotify
       mongo.store_week(model)# upload su mongo
       print("[Spotify] document inserted correctly!")
+      if merger is not None:
+        merger.notify('spotify', model['week'])
     else:
+      print(msg.value)
       print('[Spotify] week not present on spotify charts')
     
