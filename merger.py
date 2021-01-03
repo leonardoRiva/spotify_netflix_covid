@@ -5,10 +5,10 @@ import pymongo
 
 # classe per unire gli indici in una nuova collection
 
-# # quando inizializzata, se la collection non esiste / è vuota, 
+# # quando inizializzata, se la collection non esiste / è vuota,
 # # la crea a partire da tutti i documenti presenti nelle 3 collection (settimane in comune)
 
-# # quando notificata da una delle 3 controparti (su una settimana), 
+# # quando notificata da una delle 3 controparti (su una settimana),
 # # controlla se anche le altre 2 hanno quella settimana; se sì, carica un documento mergiando i dati (se non già presente)
 
 
@@ -55,7 +55,7 @@ class Merger:
         return common_weeks
 
     def mongo_to_csv(self):
-        df = pd.DataFrame(columns=['country', 'week', 'spotify', 'mobility'])
+        df = pd.DataFrame(columns=['country', 'week', 'spotify', 'mobility', 'netflix'])
 
         result = self.col.find({})
         for x in result:
@@ -64,8 +64,8 @@ class Merger:
             for country in indexes:
                 spot_ind = indexes[country]['spotify']
                 mob_ind = indexes[country]['mobility']
-                #netflix
-                df.loc[len(df)] = [country, week, spot_ind, mob_ind]
+                net_ind = indexes[country]['netflix']
+                df.loc[len(df)] = [country, week, spot_ind, mob_ind, net_ind]
 
         # print(df)
         df.to_csv('data.csv', index=False, sep=';')
@@ -79,7 +79,7 @@ class Merger:
         collections = []
         for c in self.collection_names:
             collections.append(self.db[c])
-        
+
         for week in common_weeks:
             week_doc ={}
             for country in spotify_get_countries_code():
@@ -119,7 +119,7 @@ class Merger:
             result = col.find({'week': week})
             if not len(list(result)):
                 do = False
-        
+
         # se ce l'hanno, carica il documento mergiando
         if do:
             merged = self.merge_data([week])[0]

@@ -7,14 +7,14 @@ import pandas as pd
 import json
 import time
 import variables as GLV
+import math
+import time
 from threading import Thread
-import concurrent.futures
 
 #------------------------------------------------------------------------------#
 
 countries = GLV.netflix_countries_codes()
 weeks = GLV.get_weeks('netflix_chart')
-# weeks = GLV.get_common_weeks_list()
 
 #------------------------------------------------------------------------------#
 
@@ -25,54 +25,60 @@ def get_netflix_producer():
         value_serializer=lambda v: json.dumps(v).encode('utf-8'))
 
     for w in weeks:
-        country_queue=[]
-        for i,c in enumerate(countries):
-            country_queue.append(FP_Scraper.get_weeks_chart(w,c).to_json())
-            print("[NETFLIX] scraped week: " + w + ", country: "+ c)
-        print("\n" + "[NETFLIX] SEND ALL scraped week: " + w + "\n")
-        producer.send(topic='netflix', value={'week':w, 'countries': country_queue})
+        n_thread = 4
+        q_result = []
+        q_thread = []
+        cname = [k for k in countries]
+        step = math.floor(len(cname)/n_thread)
+        c_bloks = [cname[i:i + step] for i in range(0, len(cname), step)]
 
-    # for w in weeks[0:3]:
-    #     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-    #         res_future = list(map(lambda c: executor.submit(FP_Scraper.get_weeks_chart, w, c), countries))
-    #         for rf in concurrent.futures.as_completed(res_future):
-    #             if type(rf.result()) is int and rf.result()==-1:
-    #                 print("[NETFLIX] NO DATA AVALIABLE for week: " + w)
-    #             else:
-    #                 sdf = rf.result()
-    #                 producer.send(topic='netflix', value=sdf.to_json()) # invia i dati alla coda
-    #                 print("[NETFLIX] send scraped week: " + w + ", country: " + sdf["country"][0])
-    #         time.sleep(0.1) # senza lo sleep non va, senza motivo
+        for cb in c_bloks:
+            q_thread.append(Thread(target=lambda w,cb : q_result.extend(FP_Scraper.get_week_chart(w,cb)), args=(w,cb,)))
 
+        [t.start() for t in q_thread]
+        [t.join() for t in q_thread]
+
+        print('[NETFLIX] SEND ALL week ' +  str(w))
+        producer.send(topic='netflix', value={'week':w, 'countries': q_result})
+        time.sleep(0.1)
 
 #------------------------------------------------------------------------------#
 
-def get_netflix_consumer(merger):
+def get_netflix_consumer(merger=''):
     MDB = Movies_DB(GLV)
     NF_Side = Netflix_Side(MDB)
 
     consumer = KafkaConsumer(
         bootstrap_servers=['localhost:9092'],
         auto_offset_reset='latest',
-        consumer_timeout_ms=10000, #da togliere o aumentare, chiude connessione dopo x ms che non riceve messaggi
+        consumer_timeout_ms=9999999999, #da togliere o aumentare, chiude connessione dopo x ms che non riceve messaggi
         value_deserializer=lambda v: json.loads(v.decode('utf-8')))
 
     consumer.subscribe(['netflix'])
 
     for msg in consumer:
+        tstart = time.time()
+
         week = msg.value['week']
-        country_dfs = []
+        country_dfs = msg.value['countries']
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            res_future = list(map(lambda cdf: executor.submit(NF_Side.enrich_df, pd.read_json(cdf)), msg.value['countries']))
-            for rf in concurrent.futures.as_completed(res_future):
-                df_full = rf.result()
-                country_dfs.append(df_full)
-                print("[NETFLIX] consumed " + str(df_full["country"][0]) + ", week " + str(week))
+        n_thread = 8
+        q_result = []
+        q_thread = []
+        step = math.floor(len(country_dfs)/n_thread)
+        c_bloks = [country_dfs[i:i + step] for i in range(0, len(country_dfs), step)]
 
-        week_doc = MDB.store_week_doc(week, country_dfs) # !!!!!! MC LA TUA VARIABILE DI MERGINE è WEEK_DOC
-        print("\n" + "[NETFLIX] CONSUMED ALL week " + str(week) + "\n")
-        #merger.notify('netflix', week_doc["week"]) # TODO TEST
+        for cb in c_bloks:
+            dfs = [pd.read_json(c) for c in cb]
+            q_thread.append(Thread(target=lambda dfs: q_result.extend(NF_Side.enrich_dfs(dfs)), args=(dfs,)))
+
+        [t.start() for t in q_thread]
+        [t.join() for t in q_thread]
+
+        week_doc = MDB.store_week_doc(week, q_result)
+
+        print("\n" + "[NETFLIX] CONSUMED ALL week " + str(week) + " in " + str(time.time()-tstart) + "\n")
+        merger.notify('netflix', week_doc["week"]) # TODO TEST
 
 #------------------------------------------------------------------------------#
 
