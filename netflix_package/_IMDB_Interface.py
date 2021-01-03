@@ -45,6 +45,7 @@ class IMDB_Interface():
     def get_movie_key(self, title):
         if title != '':
             movies = []
+            
             try:
                 movies = self.ia.search_movie(title)
             except Exception as e:

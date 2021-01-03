@@ -1,4 +1,5 @@
 from variables import *
+from indexNormalizer import *
 import pandas as pd
 import pymongo
 
@@ -89,6 +90,7 @@ class Merger:
                     try:
                         if self.to_check[i] == 'spotify':
                             index = result['spotify'][country]['median_index_no_recent']
+                            index = normalizer(index, country) #normalize index in scale [0;1]
                         elif self.to_check[i] == 'mobility':
                             index = result['mobility'][country]['mobility_index']
                         elif self.to_check[i] == 'netflix':
