@@ -81,15 +81,16 @@ class FlixPatrol():
         for html_lines in htmls_lines:
             #print(html_lines[4])
             week_titles.append(self.get_titles(html_lines))
-        entries = []
+
+        dfs=[]
         for i,wt in enumerate(week_titles):
+            entries = []
             [entries.append([countries[i], week, p+1, t]) for p,t in enumerate(wt)]
-        df = pd.DataFrame(entries, columns=['country','week','position', 'title'])
-        return df
+            dfs.append(pd.DataFrame(entries, columns=['country','week','position', 'title']).to_json())
+        return dfs
 
     def get_weeks_chart(self, weeks, countries=[]):
         df = pd.DataFrame(columns=['country','week','position', 'title'])
-
 
         if type(weeks) is str:
             weeks=[weeks]

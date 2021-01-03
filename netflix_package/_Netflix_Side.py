@@ -32,6 +32,10 @@ class Netflix_Side():
             df = self.add_plot_sent(df)
         return df
 
+    def enrich_dfs(self, dfs):
+        res_dfs = [self.enrich_df(df) for df in dfs]
+        return res_dfs
+
     def enrich_df(self, df, add_weeks_date=True, sentiment="all"):
         df = self.IMDB.preprocess_df(df)
         if add_weeks_date:

@@ -15,10 +15,12 @@
 import pandas as pd
 import numpy as np
 import pymongo as pymdb
+import math
+import threading
+from threading import Thread
 from imdb import IMDb
 from textblob import TextBlob
 from . _Movies_DB import Movies_DB
-import concurrent.futures
 
 class IMDB_Interface():
     """
@@ -32,14 +34,22 @@ class IMDB_Interface():
 
 #------------------------------------------------------------------------------#
 
-    def process_title(self, dfi, title):
-        id = self.get_movie_key(title)
-        minfo = self.get_movies_infos([id])
-        return dfi, minfo
+    def process_title(self, df_idxs, titles):
+        out = []
+        for i,t in enumerate(titles):
+            id = self.get_movie_key(t)
+            minfo = self.get_movies_infos([id])
+            out.append({'pos':df_idxs[i], 'info':minfo})
+        return out
 
     def get_movie_key(self, title):
         if title != '':
-            movies = self.ia.search_movie(title)
+            movies = []
+            try:
+                movies = self.ia.search_movie(title)
+            except Exception as e:
+                pass
+
             if len(movies)>0:
                 return movies[0].movieID
             else:
@@ -79,7 +89,10 @@ class IMDB_Interface():
                         movie[k] = ''
                 [out[k].append(movie[k]) for k in out]
                 if not stored:
-                    self.MDB.store_movie(movie["_id"], movie["title"], movie["genres"], movie["keywords"], movie["plot outline"])
+                    try:
+                        self.MDB.store_movie(movie["_id"], movie["title"], movie["genres"], movie["keywords"], movie["plot outline"])
+                    except Exception as e:
+                        pass
             else:
                 [out[k].append('') for k in out]
         return out
@@ -93,35 +106,24 @@ class IMDB_Interface():
     def preprocess_df(self, df):
         titles = df["title"].tolist()
         df[['_id','genres','keywords','plot outline']] = ''
-        # print("get movie keys from imdb...")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-             res_future = list(map(lambda it,t: executor.submit(self.process_title, it, t), range(0,10),titles))
-             for rf in concurrent.futures.as_completed(res_future):
-                 idx, imdb_info = rf.result()
-                 for k in imdb_info:
-                     df.loc[idx,k] = imdb_info[k][0]
-             return df
 
-#------------------------------------------------------------------------------#
+        n_thread = 2
+        q_result = []
+        q_thread = []
+        step = math.floor(len(titles)/n_thread)
+        t_bloks = [titles[i:i + step] for i in range(0, len(titles), step)]
+        idxs_bloks = [range(0,10)[i:i + step] for i in range(0, 10, step)]
 
-    # def get_movies_field(self, m_keys, kfield):
-    #     out = {kfield: []}
-    #     for m_key in m_keys:
-    #         if m_key != '':
-    #             mov = self.movie_db.movies.find({"_id": m_key, kfield:{"$exists": True}})
-    #             if mov.count()==0:
-    #                 movie = self.ia.get_movie(m_key)
-    #                 out[kfield].append(movie[kfield])
-    #                 #upsert
-    #             else:
-    #                 movie = mov[0]
-    #                 out[kfield].append(movie[kfield])
-    #         else:
-    #             out[kfield].append('')
-    #     return out
-    #
-    # def add_movie_field(self, df, kfield):
-    #     ids = df['ids'].tolist()
-    #     field_data = self.get_movies_field(ids,kfield)
-    #     df[kfiel]=field_data[kfield]
-    #     return df
+        for ib,tb in enumerate(t_bloks):
+            idxs = idxs_bloks[ib]
+            q_thread.append(Thread(target=lambda idxs,tb: q_result.extend(self.process_title(idxs, tb)), args=(idxs,tb,)))
+
+        [t.start() for t in q_thread]
+        [t.join() for t in q_thread]
+
+        for r in q_result:
+            idx = r['pos']
+            info = r['info']
+            for k in info:
+                df.loc[idx,k] = info[k][0]
+        return df

@@ -3,30 +3,30 @@ from spotify_package.database._Mongo import *
 # import sys, os
 # #sys.path.append(os.path.abspath(os.path.join('..', 'spotify_netflix_covid')))
 from variables import *
-import pandas as pd 
+import pandas as pd
 from collections import ChainMap
 
 mongo = Mongo('old_weeksDB')
 
-# (value - min)/(max - min) 
+# (value - min)/(max - min)
 
 data = mongo.find_query('spoti_weeks')
 countries1 = get_country_codes()
 countries = [
-    'nl', 'my', 'mx', 'jp', 'lv', 'lt', 'gb', 'gr', 'fr', 'fi', 
-    'ee', 'es', 'ro', 'ph', 'pt', 'pl', 'nz', 'no', 'de', 'dk', 
-    'cz', 'ch', 'co', 'ca', 'za', 'vn', 'us', 'uy', 'it', 'il', 
-    'ie', 'hk', 'hu', 'br', 'bg', 'be', 'at', 'ar', 'au', 'tw', 
+    'nl', 'my', 'mx', 'jp', 'lv', 'lt', 'gb', 'gr', 'fr', 'fi',
+    'ee', 'es', 'ro', 'ph', 'pt', 'pl', 'nz', 'no', 'de', 'dk',
+    'cz', 'ch', 'co', 'ca', 'za', 'vn', 'us', 'uy', 'it', 'il',
+    'ie', 'hk', 'hu', 'br', 'bg', 'be', 'at', 'ar', 'au', 'tw',
     'tr', 'th', 'se', 'sg']
 
 set_dif = set(countries1) - set(countries)
 list_dif = list(set_dif)
 
-print(list_dif) 
+print(list_dif)
 # NOT INCLUDED IN OLD SPOTIFY
 #['in', 'ua', 'ru']
 
-# tot_max = [] 
+# tot_max = []
 # tot_min = []
 
 # for doc in data:
@@ -43,13 +43,12 @@ print(list_dif)
 #     mmn = dict(ChainMap(*mins))
 #     tot_max.append(mmx)
 #     tot_min.append(mmn)
-    
+
 # df_max = pd.DataFrame(tot_max, columns=countries)
 # df_min = pd.DataFrame(tot_min, columns=countries)
 
 # df_max.to_csv('maxs.csv')
 # df_min.to_csv('mins.csv')
-
 
 df_max = pd.read_csv('maxs.csv')
 df_min = pd.read_csv('mins.csv')
@@ -151,4 +150,3 @@ print(min_means)
 #     {"se": 0.7207439999999998},
 #     {"sg": 0.7183559999999999},
 # ]
-

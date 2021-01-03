@@ -78,7 +78,7 @@ def get_netflix_consumer(merger=''):
         week_doc = MDB.store_week_doc(week, q_result)
 
         print("\n" + "[NETFLIX] CONSUMED ALL week " + str(week) + " in " + str(time.time()-tstart) + "\n")
-        merger.notify('netflix', week_doc["week"]) # TODO TEST
+        #merger.notify('netflix', week_doc["week"]) # TODO TEST
 
 #------------------------------------------------------------------------------#
 
