@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import concurrent.futures
 from . import _functions as FS
 
 class FlixPatrol():

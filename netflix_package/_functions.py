@@ -20,7 +20,7 @@ def kw_sent_sum(keywords):
     return sum
 
 def kw_sent_mean(keywords):
-    return kw_sent_sum(keywords) / len(keywords.split(" "))
+    return kw_sent_sum(keywords)/len(keywords.split(" ")) if len(keywords.split(" ")) != 0 else 0
 
 def plot_sent_sum(plot):
     if type(plot) is str:
@@ -29,7 +29,7 @@ def plot_sent_sum(plot):
         tb = TextBlob(plot)
         sum = 0
         for s in tb.sentences:
-            sum = s.sentiment.polarity
+            sum = sum + s.sentiment.polarity
         return sum
     else:
         return None
@@ -39,7 +39,7 @@ def plot_sent_mean(plot):
         p = plot.replace("\n", "")
         p = plot.replace(".", ".\n")
         tb = TextBlob(p)
-        return plot_sent_sum(plot) / len(tb.sentences)
+        return plot_sent_sum(plot)/len(tb.sentences) if len(tb.sentences) != 0 else 0
     else:
         return None
 
