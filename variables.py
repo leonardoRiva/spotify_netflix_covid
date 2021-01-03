@@ -46,7 +46,7 @@ def get_weeks_old():
    
 
 def db_name():
-   return 'progettoDB' 
+   return 'testDB' #'progettoDB'
 
 def spotify_collection_name():
    return 'spoti_weeks'

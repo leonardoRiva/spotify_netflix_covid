@@ -1,6 +1,14 @@
 remove_songs.py
 db_queries.py
+calcIndex.py
+
 debug.log
+
+maxs.csv
+mins.csv
+maxs_new.csv
+mins_new.csv
+
 
 
 /spotify_package/_keys.py
