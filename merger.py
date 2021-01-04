@@ -1,5 +1,5 @@
 from variables import *
-from indexNormalizer import *
+from IndexNormalizer import *
 import pandas as pd
 import pymongo
 
@@ -46,14 +46,17 @@ class Merger:
         weeks = {}
         for col_name in self.collection_names:
             col = self.db[col_name]
-            mydoc = col.find({}, {'week': 1, '_id': 0}).sort('week',-1)
+            mydoc = col.find({}, {'week': 1, '_id': 0})
             weeks[col_name] = []
             for d in mydoc:
                 weeks[col_name].append(d['week'])
+            weeks[col_name].sort(key=lambda date: datetime.strptime(date, "%Y-%m-%d"), reverse=True)
 
         l = list(weeks.values())
         common_weeks = list(set.intersection(*map(set, l)))
         return common_weeks
+
+
 
     def mongo_to_csv(self):
         df = pd.DataFrame(columns=['country', 'week', 'spotify', 'mobility', 'netflix'])
@@ -94,7 +97,7 @@ class Merger:
                         elif self.to_check[i] == 'mobility':
                             index = result['mobility'][country]['mobility_index']
                         elif self.to_check[i] == 'netflix':
-                            index = result['netflix'][country]['netflix_index']
+                            index = result['netflix'][country]['kw_mean']
                     except:
                         index = None
                     country_doc[self.to_check[i]] = index
