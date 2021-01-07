@@ -53,7 +53,7 @@ def get_spotify_consumer(merger=None):
       mongo.store_week(model)# upload su mongo
       print("[Spotify] document inserted correctly!")
       if merger is not None:
-        merger.notify('spotify', model['week'])
+        merger.notify('spotify', model)
     else:
       print(msg.value)
       print('[Spotify] week not present on spotify charts')

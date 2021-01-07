@@ -52,4 +52,4 @@ def get_covid_consumer(merger):
         doc = msg.value
         collection.insert_one(doc)
         print("[Covid] document inserted correctly! " + doc['week'])
-        merger.notify('mobility', doc['week'])
+        merger.notify('mobility', doc)
