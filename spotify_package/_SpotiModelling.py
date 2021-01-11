@@ -58,17 +58,22 @@ class SpotiModelling():
         if len(indexs_all) > 0:
             mean_index_all = np.mean(indexs_all)
             median_index_all = np.median(indexs_all)
+            weight_avg_mean_index_all = self.weighted_average_mean(indexs_all)    
+
             
         else:
             mean_index_all = None
             median_index_all = None
+            weight_avg_mean_index_all = None
 
         if len(indexs_no_recent) > 0:
             mean_index_no_recent = np.mean(indexs_no_recent)
             median_index_no_recent = np.median(indexs_no_recent)
+            weight_avg_mean_index_no_recent = self.weighted_average_mean(indexs_no_recent)    
         else:
             mean_index_no_recent = None
             median_index_no_recent = None
+            weight_avg_mean_index_no_recent = None
  
         min_index_all = np.min(indexs_all)
         max_index_all = np.max(indexs_all)
@@ -85,12 +90,23 @@ class SpotiModelling():
             "min_all": min_index_all,
             "max_all": max_index_all,
             "min_no_recent": min_indexs_no_recent,
-            "max_no_recent": max_indexs_no_recent
+            "max_no_recent": max_indexs_no_recent,
+            "weighted_mean_index_no_recent": weight_avg_mean_index_no_recent,
+            "weighted_mean_index_all": weight_avg_mean_index_all
+
         }
 
         return {country_name: model}
     
     
+    def weighted_average_mean(self, values):
+
+        weights = list(range(1, len(values) + 1))[::-1]
+        weighted_avg = np.average(values, weights=weights)
+        return weighted_avg
+
+
+
     def split_by_number(self, n, l):
 
         a = []

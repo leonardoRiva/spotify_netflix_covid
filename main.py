@@ -13,6 +13,7 @@ producers = []
 
 merger = Merger()
 
+
 consumers.append(Thread(target=get_netflix_consumer, args=(merger,)))
 producers.append(Thread(target=get_netflix_producer))
 

@@ -44,7 +44,7 @@ def get_netflix_producer():
 
 #------------------------------------------------------------------------------#
 
-def get_netflix_consumer(merger=''):
+def get_netflix_consumer(merger=None):
     MDB = Movies_DB(GLV)
     NF_Side = Netflix_Side(MDB)
 
@@ -78,7 +78,8 @@ def get_netflix_consumer(merger=''):
         week_doc = MDB.store_week_doc(week, q_result)
 
         print("\n" + "[NETFLIX] CONSUMED ALL week " + str(week) + " in " + str(time.time()-tstart) + "\n")
-        #merger.notify('netflix', week_doc["week"]) # TODO TEST
+        if merger is not None:
+            merger.notify('netflix', week_doc["week"]) # TODO TEST
 
 #------------------------------------------------------------------------------#
 
