@@ -3,6 +3,7 @@ from IndexNormalizer import *
 import pandas as pd
 import pymongo
 import numpy as np
+import math
 
 
 # classe per unire gli indici in una nuova collection
@@ -160,8 +161,8 @@ class Merger:
 
             for t in self.to_check:
                 y = list(tmp[t])
-                none_indexes = [i for i in range(len(y)) if y[i] is None]
-                y_without_none = [e for e in y if e is not None]
+                none_indexes = [i for i in range(len(y)) if y[i] is None or math.isnan(y[i])]
+                y_without_none = [e for e in y if e is not None and not math.isnan(e)]
                 x = list(np.arange(len(y_without_none)))
                 y_smoothed = list(np.poly1d(np.polyfit(x,y_without_none,15))(x))
                 for i in none_indexes:
@@ -198,5 +199,5 @@ class Merger:
 
 
 
-m = Merger()
-m.mongo_to_csv('_final.csv')
+# m = Merger()
+# m.mongo_to_csv('_final.csv')
