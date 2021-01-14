@@ -4,6 +4,7 @@ import pandas as pd
 import pymongo
 import numpy as np
 import math
+from datetime import datetime, timedelta
 
 
 # classe per unire gli indici in una nuova collection
@@ -18,6 +19,7 @@ import math
 class Merger:
 
     def __init__(self):
+        self.df = pd.DataFrame()
         client = pymongo.MongoClient("mongodb://localhost:27017/")
         self.db = client[db_name()]
         self.col = self.db[merged_collection_name()]
@@ -116,88 +118,111 @@ class Merger:
 
 
     def mongo_to_csv(self, filename):
-        df = self.mongo_to_df()
-        df = self.sort_df(df)
-        df = self.smooth(df)
-        df = self.normalize_df(df)
-        df = self.add_derivates(df)
-        df.to_csv(filename, index=False, sep=';')
-
+        self.mongo_to_df()
+        self.df.to_csv(filename, index=False, sep=';')
 
 
     def mongo_to_df(self):
-        df = pd.DataFrame(columns=['country', 'week', 'mobility', 'netflix', 'spotify'])
-        result = self.col.find({})
-        for x in result:
-            week = x['week']
-            indexes = x['indexes']
-            for country in indexes:
-                if country not in ['ua', 'ru']:
-                    mob_ind = indexes[country]['mobility']
-                    net_ind = indexes[country]['netflix']
-                    spot_ind = indexes[country]['spotify']
+        if self.df.empty:
+            self.df = pd.DataFrame(columns=['country', 'week', 'mobility', 'netflix', 'spotify'])
+            result = self.col.find({})
+            for x in result:
+                week = x['week']
+                indexes = x['indexes']
+                tmp = []
 
-                    if net_ind is not None:
-                        net_ind = net_ind['kw_mean']
-                    if spot_ind is not None:
-                        spot_ind = spot_ind['mean']
+                for country in indexes:
+                    if country not in ['ua', 'ru']:
+                        mob_ind = indexes[country]['mobility']
+                        net_ind = indexes[country]['netflix']
+                        spo_ind = indexes[country]['spotify']
 
-                    df.loc[len(df)] = [country, week, mob_ind, net_ind, spot_ind]
-        return df
+                        if net_ind is not None:
+                            net_ind = net_ind['kw_mean']
+                        if spo_ind is not None:
+                            spo_ind = spo_ind['mean']
+
+                        tmp.append([country, week, mob_ind, net_ind, spo_ind])
+
+                self.df = self.df.append(pd.DataFrame(tmp, columns=['country', 'week', 'mobility', 'netflix', 'spotify']))
+            self.sort_df()
 
 
+    def sort_df(self):
+        self.df = self.df.sort_values(by=['week','country'])
+        self.df = self.df.reset_index(drop=True)
 
-    def sort_df(self, df):
-        df = df.sort_values(by=['week','country'])
+
+# -----------------
+
+        
+    def correlation_csv(self, filename):
+        self.mongo_to_df()
+        tmp_df = self.df.copy()
+        del tmp_df['netflix']
+        tmp_df = tmp_df.dropna()
+        tmp_df = self.get_correlations(tmp_df)
+        tmp_df.to_csv(filename, index=False, sep=';')
+
+
+    def get_correlations(self, df):
+        df_corr = pd.DataFrame(columns=['country', 'correlation'])
+        for c in set(df['country']):
+            tmp = df[df['country']==c]
+            corr = np.corrcoef(tmp['mobility'], tmp['spotify'])[0][1]
+            df_corr.loc[len(df_corr)] = [c, corr]
+        df_corr = df_corr.sort_values(by=['correlation'])
+        df_corr = df_corr.reset_index(drop=True)
+        return df_corr
+
+
+# --------------
+
+
+    def every_songs_csv(self, filename):
+        df = pd.DataFrame(columns=['country', 'week', 'title', 'artist', 'position', 'song_positivity'])
+
+        songs_info = self.get_songs_dict()
+
+        col = self.db[spotify_collection_name()]
+        result = col.find({}, {'week': 1, 'spotify': 1, '_id': 0})
+
+        for doc in result:
+            week = doc['week']
+            chart = doc['spotify']
+
+            countries = list(chart.keys())
+            if 'ua' in countries:
+                countries.remove('ua')
+            if 'ru' in countries:
+                countries.remove('ru')
+
+            for country in countries:
+                limit = datetime.strptime(week, '%Y-%m-%d') + timedelta(days=-90)
+
+                tmp = [[country, week, songs_info[song['id']]['title'], songs_info[song['id']]['artist'], song['position'], song['index']] 
+                            for song in chart[country]['songs']
+                            if (song['id'] in songs_info and datetime.strptime(songs_info[song['id']]['release_date'], '%Y-%m-%d') < limit)]
+
+                df = df.append(pd.DataFrame(tmp, columns=['country', 'week', 'title', 'artist', 'position', 'song_positivity']))
+
+            print('[every song merger] done week: ' + week)
+
         df = df.reset_index(drop=True)
-        return df
+        df.to_csv(filename, index=False, sep=';')
 
 
-
-    def smooth(self, df):
-        new_df = pd.DataFrame(columns=df.columns)
-        for c in set(df['country']):
-            tmp = (df[df['country']==c]).copy()
-
-            for t in self.to_check:
-                y = list(tmp[t])
-                none_indexes = [i for i in range(len(y)) if y[i] is None or math.isnan(y[i])]
-                y_without_none = [e for e in y if e is not None and not math.isnan(e)]
-                x = list(np.arange(len(y_without_none)))
-                y_smoothed = list(np.poly1d(np.polyfit(x,y_without_none,15))(x))
-                for i in none_indexes:
-                    y_smoothed.insert(i, None)
-                tmp[t] = y_smoothed
-
-            new_df = new_df.append(tmp)
-        new_df = new_df.reset_index(drop=True)
-        return new_df
+    def get_songs_dict(self): # dizionario per le info delle canzoni
+        col_songs = self.db['songs']
+        result = col_songs.find({}, {'song_id': 1, 'release_date': 1, 'artist': 1, 'track_name': 1, '_id': 0})
+        songs_info = {s['song_id']: {'release_date': s['release_date'], 'artist': s['artist'], 'title': s['track_name']} for s in result}
+        return songs_info
 
 
-
-    def normalize_df(self, df):
-        for t in self.to_check:
-            df[t] = (df[t] - df[t].min()) / (df[t].max() - df[t].min())
-        return df
+# ----------------
 
 
-
-    def add_derivates(self, df):
-        df2 = pd.DataFrame(columns=(df.columns))
-        for c in set(df['country']):
-            if c not in ['ua', 'ru']:
-                tmp = df[df['country']==c].copy()
-
-                for t in self.to_check:
-                    tmp[t+'_derivative'] = [None] + list(np.diff(list(tmp[t])))
-
-                tmp['netflix_scarti'] = abs(tmp['netflix_derivative'] - tmp['mobility_derivative'])
-                tmp['spotify_scarti'] = abs(tmp['spotify_derivative'] - tmp['mobility_derivative'])
-
-                df2 = pd.concat([df2, tmp])
-        return df2
-
-
-
-# m = Merger()
-# m.mongo_to_csv('_final.csv')
+m = Merger()
+m.mongo_to_csv('tutto.csv')
+m.correlation_csv('correlation_mobility_spotify.csv')
+m.every_songs_csv('singole_canzoni.csv')
