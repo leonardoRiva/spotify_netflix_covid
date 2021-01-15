@@ -75,9 +75,10 @@ class Merger:
                         result = (col.find({'week': week}, {self.to_check[i]: 1, '_id': 0}))[0] # query
 
                         if self.to_check[i] == 'spotify':
-                            index = result['spotify'][country]['mean_index_no_recent']
-                            index2 = result['spotify'][country]['median_index_no_recent']
-                            country_doc['spotify'] = {'mean': index, 'median': index2}
+                            i1 = result['spotify'][country]['mean_valences']
+                            i2 = result['spotify'][country]['mean_energies']
+                            i3 = result['spotify'][country]['mean_danceabilities']
+                            country_doc['spotify'] = {'mean_valences': i1, 'mean_energies': i2, 'mean_danceabilities': i3}
 
                         elif self.to_check[i] == 'mobility':
                             index = result['mobility'][country]['mobility_index']
@@ -123,8 +124,9 @@ class Merger:
 
 
     def mongo_to_df(self):
+        columns = ['country', 'week', 'mobility', 'netflix', 'spotify_valence','spotify_energy','spotify_danceability']
         if self.df.empty:
-            self.df = pd.DataFrame(columns=['country', 'week', 'mobility', 'netflix', 'spotify'])
+            self.df = pd.DataFrame(columns=columns)
             result = self.col.find({})
             for x in result:
                 week = x['week']
@@ -139,12 +141,12 @@ class Merger:
 
                         if net_ind is not None:
                             net_ind = net_ind['kw_mean']
-                        if spo_ind is not None:
-                            spo_ind = spo_ind['mean']
+                        # if spo_ind is not None:
+                        #     spo_ind = spo_ind['mean']
 
-                        tmp.append([country, week, mob_ind, net_ind, spo_ind])
+                        tmp.append([country, week, mob_ind, net_ind, spo_ind['mean_valences'], spo_ind['mean_energies'], spo_ind['mean_danceabilities']])
 
-                self.df = self.df.append(pd.DataFrame(tmp, columns=['country', 'week', 'mobility', 'netflix', 'spotify']))
+                self.df = self.df.append(pd.DataFrame(tmp, columns=columns))
             self.sort_df()
 
 
@@ -224,5 +226,5 @@ class Merger:
 
 m = Merger()
 m.mongo_to_csv('tutto.csv')
-m.correlation_csv('correlation_mobility_spotify.csv')
-m.every_songs_csv('singole_canzoni.csv')
+# m.correlation_csv('correlation_mobility_spotify.csv')
+# m.every_songs_csv('singole_canzoni.csv')

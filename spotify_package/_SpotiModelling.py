@@ -54,10 +54,10 @@ class SpotiModelling():
         #index_spotify = self.create_index(songs)
 
         #MULTI SONG
-        songs, indexs_all, indexs_no_recent = self.add_unique_song_all(parsed, week)
+        songs, indexs_all, indexs_no_recent, valences, energies, danceabilities = self.add_unique_song_all(parsed, week)
         if len(indexs_all) > 0:
-            mean_index_all = np.mean(indexs_all)
-            median_index_all = np.median(indexs_all)
+            mean_index_all = np.mean(indexs_all)/3
+            median_index_all = np.median(indexs_all)/3
             weight_avg_mean_index_all = self.weighted_average_mean(indexs_all)    
 
             
@@ -67,18 +67,28 @@ class SpotiModelling():
             weight_avg_mean_index_all = None
 
         if len(indexs_no_recent) > 0:
-            mean_index_no_recent = np.mean(indexs_no_recent)
-            median_index_no_recent = np.median(indexs_no_recent)
+            mean_index_no_recent = np.mean(indexs_no_recent)/3
+            median_index_no_recent = np.median(indexs_no_recent)/3
             weight_avg_mean_index_no_recent = self.weighted_average_mean(indexs_no_recent)    
         else:
             mean_index_no_recent = None
             median_index_no_recent = None
             weight_avg_mean_index_no_recent = None
+
+        
+        if len(valences) > 0:
+            mean_valences = np.mean(valences)
+            mean_energies = np.mean(energies)
+            mean_danceabilities = np.mean(danceabilities)
+        else:
+            mean_valences = None
+            mean_energies = None
+            mean_danceabilities = None
  
-        min_index_all = np.min(indexs_all)
-        max_index_all = np.max(indexs_all)
-        min_indexs_no_recent = np.min(indexs_no_recent)
-        max_indexs_no_recent = np.max(indexs_no_recent)
+        min_index_all = np.min(indexs_all)/3
+        max_index_all = np.max(indexs_all)/3
+        min_indexs_no_recent = np.min(indexs_no_recent)/3
+        max_indexs_no_recent = np.max(indexs_no_recent)/3
         #country_name = self.code_to_country(country.lower())
         country_name = country.lower()
         model = {
@@ -92,8 +102,10 @@ class SpotiModelling():
             "min_no_recent": min_indexs_no_recent,
             "max_no_recent": max_indexs_no_recent,
             "weighted_mean_index_no_recent": weight_avg_mean_index_no_recent,
-            "weighted_mean_index_all": weight_avg_mean_index_all
-
+            "weighted_mean_index_all": weight_avg_mean_index_all,
+            "mean_valences": mean_valences,
+            "mean_energies": mean_energies,
+            "mean_danceabilities": mean_danceabilities
         }
 
         return {country_name: model}
@@ -136,9 +148,18 @@ class SpotiModelling():
         
         indexs_all = []
         indexs_no_recent = []
+
+        valences = []
+        danceabilities = []
+        energies = []
+
         songs = []
         to_store = []
         for i, song in enumerate(query):#adds features to new songs
+            valence = None
+            energy = None
+            danceability = None
+
             song_index_all = song_index_no_recent = None
             if song is None:
                 features = q.pop(0)#removes first
@@ -149,10 +170,17 @@ class SpotiModelling():
                     song_index_all = features['valence'] + features['danceability'] + features['energy']
                     if self.is_song_old(features['release_date'], week): #if song is old
                         song_index_no_recent = song_index_all
+                        valence = features['valence']
+                        energy = features['energy']
+                        danceability = features['danceability']
+
             else:
                 song_index_all = song['features']['valence'] + song['features']['danceability'] + song['features']['energy']
                 if self.is_song_old(song['release_date'], week): #if song is old
                     song_index_no_recent = song_index_all
+                    valence = song['features']['valence']
+                    energy = song['features']['energy']
+                    danceability = song['features']['danceability']
             model = {
                 "id": df[i]['URL'].split('/')[-1],
                 "streams": df[i]['Streams'],
@@ -164,10 +192,17 @@ class SpotiModelling():
                 indexs_all.append(song_index_all)
             if song_index_no_recent is not None:
                 indexs_no_recent.append(song_index_no_recent)
+
+            if valence is not None:
+                valences.append(valence)
+            if energy is not None:
+                energies.append(energy)
+            if danceability is not None:
+                danceabilities.append(danceability)
         if len(to_store) > 0:
             self.song_db.store_songs(to_store) #stores all new songs w/ features
         #returns list of enhanced songs and total index of single country
-        return songs, indexs_all, indexs_no_recent
+        return songs, indexs_all, indexs_no_recent, valences, energies, danceabilities
                 
 
     def is_song_old(self, rel_date, week):
