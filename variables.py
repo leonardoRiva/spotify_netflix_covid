@@ -4,29 +4,30 @@ import pymongo
 
 def get_weeks(collection_name):
 
-   # trova ultima settimana salvata sul db, per restituire un array con tutte i lunedì fino ad oggi
-   try:
-      client = pymongo.MongoClient("mongodb://localhost:27017/")
-      db = client[db_name()]
-      collection = db[collection_name]
-      mydoc = collection.find({}, {'week': 1, '_id': 0}).sort('week',-1).limit(1)
-      last = mydoc[0]['week']
-      client.close()
-   except:
-      last = '2020-08-03' # una settimana prima della 1°, perché poi sommo 7 giorni
+    # array con le settimane presenti nella collection
+    try:
+        client = pymongo.MongoClient("mongodb://localhost:27017/")
+        db = client['testDB']
+        collection = db[collection_name]
+        mydoc = collection.find({}, {'week': 1, '_id': 0})
+        presenti = [x['week'] for x in mydoc]
+        client.close()
+    except:
+        presenti = []
+    
+    # array con tutti i lunedì dall'inizio
+    i = datetime.strptime('2020-02-17', '%Y-%m-%d')
+    mondays = []
+    today = datetime.today()
+    while i < today:
+        mondays.append(datetime.strftime(i, '%Y-%m-%d'))
+        i += timedelta(days=7)
+    
+    # array con le settimane mancanti nella collection
+    mancanti = [x for x in mondays if x not in presenti]
 
-   # se non è lunedì, trova il primo successivo
-   i = datetime.strptime(last, '%Y-%m-%d') + timedelta(days=7)
-   while i.weekday() != 0:
-      i += timedelta(days=1)
+    return mancanti
 
-   # calcola tutti i lunedì
-   weeks = []
-   today = datetime.today()
-   while i < today:
-      weeks.append(datetime.strftime(i, '%Y-%m-%d'))
-      i += timedelta(days=7)
-   return weeks
 
 
 def get_weeks_old():

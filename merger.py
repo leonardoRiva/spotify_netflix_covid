@@ -5,6 +5,7 @@ import pymongo
 import numpy as np
 import math
 from datetime import datetime, timedelta
+import sys
 
 
 # classe per unire gli indici in una nuova collection
@@ -70,26 +71,21 @@ class Merger:
             week_doc ={}
             for country in spotify_get_countries_code():
                 country_doc = {}
-                for i,col in enumerate(collections):
+                for i,side in enumerate(self.to_check):
+
                     try:
-                        result = (col.find({'week': week}, {self.to_check[i]: 1, '_id': 0}))[0] # query
+                        result = collections[i].find_one({'week': week}, {side: 1, '_id': 0}) # query
+                        country_doc[side] = {}
 
-                        if self.to_check[i] == 'spotify':
-                            i1 = result['spotify'][country]['mean_valences']
-                            i2 = result['spotify'][country]['mean_energies']
-                            i3 = result['spotify'][country]['mean_danceabilities']
-                            country_doc['spotify'] = {'mean_valences': i1, 'mean_energies': i2, 'mean_danceabilities': i3}
+                        keys = set(result[side][country].keys())
+                        keys.discard('songs')
+                        keys.discard('movies')
+                        
+                        for k in keys:
+                            country_doc[side][k] = result[side][country][k]
 
-                        elif self.to_check[i] == 'mobility':
-                            index = result['mobility'][country]['mobility_index']
-                            country_doc['mobility'] = index
-
-                        elif self.to_check[i] == 'netflix':
-                            index = result['netflix'][country]['kw_mean']
-                            index2 = result['netflix'][country]['plot_mean']
-                            country_doc['netflix'] = {'kw_mean': index, 'plot_mean': index2}
                     except:
-                        country_doc[self.to_check[i]] = None
+                        country_doc[side] = None
 
                 week_doc[country] = country_doc
             final.append({'week': week, 'indexes': week_doc})
@@ -98,20 +94,16 @@ class Merger:
 
 
     def notify(self, side, doc):
-        # controlla se questa settimana non sia già presente nella collection
+        # se questa settimana è già nella collection merge, la elimina
         result = self.col.find_one({'week': doc['week']})
-        
-        if result is not None: # se presente, inserisce il valore notificato (se è null)
-            if result['indexes']['it'][side] is None:
-                for country in spotify_get_countries_code():
-                    result['indexes'][country][side] = doc[side][country][side+'_index']
-                self.col.update_one({'week': doc['week']}, {'$set': {'indexes': result['indexes']}})
-                print('[Merged] week updated in the merged collection')
+        if result is not None:
+            self.col.delete_one({'week': doc['week']})
 
-        else: # altrimenti, crea un documento mergiando
-            merged = self.merge_data([doc['week']])[0]
-            self.col.insert_one(merged)
-            print('[Merged] week added to the merged collection')
+        # carica il documento mergiato
+        merged = self.merge_data([doc['week']])[0]
+        self.col.insert_one(merged)
+        
+        print('[Merged] week added to the merged collection')
 
 
 
@@ -123,31 +115,45 @@ class Merger:
         self.df.to_csv(filename, index=False, sep=';')
 
 
+
     def mongo_to_df(self):
-        columns = ['country', 'week', 'mobility', 'netflix', 'spotify_valence','spotify_energy','spotify_danceability']
+        sides_columns = [['mean_valences', 'mean_energies', 'mean_danceabilities', 'weighted_mean_index_no_recent'], 
+                            ['mobility_index'], 
+                            ['plot_mean', 'kw_mean', 'genres_mean']]
+
+        columns = ['country', 'week'] + sides_columns[0] + sides_columns[1] + sides_columns[2]
+
         if self.df.empty:
             self.df = pd.DataFrame(columns=columns)
             result = self.col.find({})
+
             for x in result:
                 week = x['week']
                 indexes = x['indexes']
                 tmp = []
 
-                for country in indexes:
-                    if country not in ['ua', 'ru']:
-                        mob_ind = indexes[country]['mobility']
-                        net_ind = indexes[country]['netflix']
-                        spo_ind = indexes[country]['spotify']
+                countries = set(indexes.keys())
+                countries.discard('ua')
+                countries.discard('ru')
 
-                        if net_ind is not None:
-                            net_ind = net_ind['kw_mean']
-                        # if spo_ind is not None:
-                        #     spo_ind = spo_ind['mean']
+                for country in countries:
+                    row = []
 
-                        tmp.append([country, week, mob_ind, net_ind, spo_ind['mean_valences'], spo_ind['mean_energies'], spo_ind['mean_danceabilities']])
+                    for i,k in enumerate(indexes[country]):
+                        ind = indexes[country][k]
+
+                        if ind is not None:
+                            values = [ind[col] for col in sides_columns[i]]
+                        else:
+                            values = [None for col in sides_columns[i]]
+
+                        row += values
+
+                    tmp.append([country, week] + row)
 
                 self.df = self.df.append(pd.DataFrame(tmp, columns=columns))
             self.sort_df()
+
 
 
     def sort_df(self):
@@ -158,10 +164,12 @@ class Merger:
 # -----------------
 
         
-    def correlation_csv(self, filename):
+    def correlation_csv(self, filename, column):
         self.mongo_to_df()
-        tmp_df = self.df.copy()
-        del tmp_df['netflix']
+        tmp_df = pd.DataFrame()
+        tmp_df['country'] = self.df['country']
+        tmp_df['mobility'] = self.df['mobility_index']
+        tmp_df['other'] = self.df[column]
         tmp_df = tmp_df.dropna()
         tmp_df = self.get_correlations(tmp_df)
         tmp_df.to_csv(filename, index=False, sep=';')
@@ -171,7 +179,7 @@ class Merger:
         df_corr = pd.DataFrame(columns=['country', 'correlation'])
         for c in set(df['country']):
             tmp = df[df['country']==c]
-            corr = np.corrcoef(tmp['mobility'], tmp['spotify'])[0][1]
+            corr = np.corrcoef(tmp['mobility'].astype(float), tmp['other'].astype(float))[0][1]
             df_corr.loc[len(df_corr)] = [c, corr]
         df_corr = df_corr.sort_values(by=['correlation'])
         df_corr = df_corr.reset_index(drop=True)
@@ -193,11 +201,9 @@ class Merger:
             week = doc['week']
             chart = doc['spotify']
 
-            countries = list(chart.keys())
-            if 'ua' in countries:
-                countries.remove('ua')
-            if 'ru' in countries:
-                countries.remove('ru')
+            countries = set(chart.keys())
+            countries.discard('ua')
+            countries.discard('ru')
 
             for country in countries:
                 limit = datetime.strptime(week, '%Y-%m-%d') + timedelta(days=-90)
@@ -225,6 +231,6 @@ class Merger:
 
 
 m = Merger()
-m.mongo_to_csv('tutto.csv')
-# m.correlation_csv('correlation_mobility_spotify.csv')
-# m.every_songs_csv('singole_canzoni.csv')
+# m.mongo_to_csv('tuttoo.csv')
+# m.correlation_csv('correlation_mobility_spotify.csv', 'weighted_mean_index_no_recent')
+m.every_songs_csv('singole_canzoni.csv')

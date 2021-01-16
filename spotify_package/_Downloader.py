@@ -69,6 +69,9 @@ class Downloader():
         threads_list = []
         n_threads = 8
         splitted_codes = [list(x) for x in np.array_split(self.country_codes, n_threads)]
+
+        print('[Spotify] downloading week ' + week)
+
         for l_codes in splitted_codes:
             threads_list.append(Thread(target=lambda q, arg1, arg2: q.put(self.mos_group(arg1, arg2)), args=(q, l_codes, week)))
 
@@ -76,6 +79,8 @@ class Downloader():
             t.start()
         for t in threads_list:
             t.join()
+
+        print('[Spotify] downloaded week  ' + week)
 
         l = [] # queue to list
         while not q.empty():
@@ -95,7 +100,6 @@ class Downloader():
 
     def mos_group(self, codes, week):
         dfs = [self.mos_single(code,week) for code in codes]
-        print('[Spotify] downloaded: ' + week + ' -> ' + str(codes))
         return dfs
 
 
