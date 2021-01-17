@@ -5,7 +5,7 @@ import pymongo
 import numpy as np
 import math
 from datetime import datetime, timedelta
-import sys
+from scipy.stats import linregress
 
 
 # classe per unire gli indici in una nuova collection
@@ -110,16 +110,30 @@ class Merger:
 #-------------------
 
 
-    def mongo_to_csv(self, filename):
+    def mongo_to_csv(self, filename, columns=[]):
+        # salva i dati della collection merged_data in un csv, 
+        # prendendo solo gli indici passati come parametro (tutti se [])
         self.mongo_to_df()
-        self.df.to_csv(filename, index=False, sep=';')
+        df = self.df.copy()
+        if columns != []:
+            columns = ['country', 'week'] + columns
+            to_drop = [x for x in list(df.columns) if x not in columns]
+            df = df.drop(to_drop, axis=1)
+        df.to_csv(filename, index=False, sep=';')
 
 
 
     def mongo_to_df(self):
-        sides_columns = [['mean_valences', 'mean_energies', 'mean_danceabilities', 'weighted_mean_index_no_recent'], 
-                            ['mobility_index'], 
-                            ['plot_mean', 'kw_mean', 'genres_mean']]
+        # salva i dati della collection merged_data in un dataframe
+
+        # prende i nomi di tutti gli indici in ogni collection
+        sides_columns = [] 
+        for i,side in enumerate(self.to_check):
+            result = self.db[self.collection_names[i]].find_one({})
+            indexes_names = set(result[side]['it'].keys())
+            indexes_names.discard('songs')
+            indexes_names.discard('movies')
+            sides_columns.append(list(indexes_names))
 
         columns = ['country', 'week'] + sides_columns[0] + sides_columns[1] + sides_columns[2]
 
@@ -139,8 +153,8 @@ class Merger:
                 for country in countries:
                     row = []
 
-                    for i,k in enumerate(indexes[country]):
-                        ind = indexes[country][k]
+                    for i,side in enumerate(indexes[country]):
+                        ind = indexes[country][side]
 
                         if ind is not None:
                             values = [ind[col] for col in sides_columns[i]]
@@ -152,8 +166,9 @@ class Merger:
                     tmp.append([country, week] + row)
 
                 self.df = self.df.append(pd.DataFrame(tmp, columns=columns))
-            self.sort_df()
 
+            self.sort_df()
+            self.smooth_df()
 
 
     def sort_df(self):
@@ -161,26 +176,63 @@ class Merger:
         self.df = self.df.reset_index(drop=True)
 
 
+    def smooth_df(self):
+        df = pd.DataFrame(columns=self.df.columns)
+
+        for country in set(self.df['country']):
+            tmp = self.df[self.df['country']==country]
+            
+            smoothed_country = pd.DataFrame()
+            smoothed_country['week'] = list(tmp['week']) #[1:-1])
+            smoothed_country['country'] = [country]*len(list(smoothed_country['week']))
+
+            columns = set(tmp.columns)
+            columns.discard('week')
+            columns.discard('country')
+
+            for col in columns:
+                values = list(tmp[col])
+                smoothed_country[col] = self.moving_average(values, 3)
+
+            df = df.append(smoothed_country)
+
+        self.df = df.copy()
+    
+
+    def moving_average(self, x, w):
+        # w = window size, DISPARI!
+        x2 = [i for i in x if i is not None]
+        sm = [None]*int((w-1)/2) + list(np.convolve(x2, np.ones(w), 'valid') / w) + [None]*int((w-1)/2)
+
+        b = [True if i is not None else False for i in x]
+        first = b.index(True)
+        last = len(b)-b[::-1].index(True)
+
+        x[first:last] = sm
+        return x
+
 # -----------------
 
         
-    def correlation_csv(self, filename, column):
+    def correlation_csv(self, filename, column1, column2):
+        # salva in un csv la correlazione tra i due indici passati come parametro
         self.mongo_to_df()
         tmp_df = pd.DataFrame()
         tmp_df['country'] = self.df['country']
-        tmp_df['mobility'] = self.df['mobility_index']
-        tmp_df['other'] = self.df[column]
+        tmp_df[column1] = self.df[column1]
+        tmp_df[column2] = self.df[column2]
         tmp_df = tmp_df.dropna()
-        tmp_df = self.get_correlations(tmp_df)
+        tmp_df = self.get_correlations(tmp_df, column1, column2)
         tmp_df.to_csv(filename, index=False, sep=';')
 
 
-    def get_correlations(self, df):
+    def get_correlations(self, df, column1, column2):
         df_corr = pd.DataFrame(columns=['country', 'correlation'])
         for c in set(df['country']):
             tmp = df[df['country']==c]
-            corr = np.corrcoef(tmp['mobility'].astype(float), tmp['other'].astype(float))[0][1]
-            df_corr.loc[len(df_corr)] = [c, corr]
+            tmp = tmp.dropna()
+            corr = linregress(list(tmp[column1]), list(tmp[column2]))
+            df_corr.loc[len(df_corr)] = [c, corr.rvalue]
         df_corr = df_corr.sort_values(by=['correlation'])
         df_corr = df_corr.reset_index(drop=True)
         return df_corr
@@ -231,6 +283,6 @@ class Merger:
 
 
 m = Merger()
-# m.mongo_to_csv('tuttoo.csv')
-# m.correlation_csv('correlation_mobility_spotify.csv', 'weighted_mean_index_no_recent')
-m.every_songs_csv('singole_canzoni.csv')
+m.mongo_to_csv('tuttoo.csv', ['mean_index_no_recent', 'mobility_index'])
+m.correlation_csv('correlation_mean_index_no_recent.csv', 'mean_index_no_recent', 'mobility_index')
+# m.every_songs_csv('singole_canzoni.csv')
