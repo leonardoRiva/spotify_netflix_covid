@@ -169,7 +169,27 @@ class Merger:
 
             self.sort_df()
             self.smooth_df()
+            self.calculate_percentages(columns)
+            print(self.df)
 
+
+    def calculate_percentages(self, columns):
+        #self.df = self.df.dropna(subset=['mobility_index'])
+        self.df = self.df[self.df['mobility_index'].notna()]
+        df2 = pd.DataFrame(columns=columns+['spotify_percentage', 'mobility_percentage'])
+        for c in set(self.df['country']):
+            tmp = self.df[self.df['country']==c].copy()
+
+            l = list(tmp['mean_index_no_recent'])
+            first = l[0]
+            tmp['spotify_percentage'] = [100*((x-first)/first) for x in l]
+
+            l = list(tmp['mobility_index'])
+            first = l[0]
+            tmp['mobility_percentage'] = [100*((x-first)/first) for x in l]
+
+            df2 = df2.append(tmp)
+        self.df = df2
 
     def sort_df(self):
         self.df = self.df.sort_values(by=['week','country'])
@@ -283,6 +303,6 @@ class Merger:
 
 
 m = Merger()
-m.mongo_to_csv('tuttoo.csv', ['mean_index_no_recent', 'mobility_index'])
-m.correlation_csv('correlation_mean_index_no_recent.csv', 'mean_index_no_recent', 'mobility_index')
+m.mongo_to_csv('tuttoo.csv', ['mean_index_no_recent', 'mobility_index', 'spotify_percentage', 'mobility_percentage'])
+#m.correlation_csv('correlation_mean_index_no_recent.csv', 'mean_index_no_recent', 'mobility_index')
 # m.every_songs_csv('singole_canzoni.csv')
