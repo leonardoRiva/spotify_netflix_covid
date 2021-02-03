@@ -110,7 +110,7 @@ class Merger:
 #-------------------
 
 
-    def mongo_to_csv(self, filename, columns=[]):
+    def mongo_to_csv(self, filename, columns=[], add_correlations=False):
         # salva i dati della collection merged_data in un csv, 
         # prendendo solo gli indici passati come parametro (tutti se [])
         self.mongo_to_df()
@@ -119,13 +119,17 @@ class Merger:
             columns = ['country', 'week'] + columns
             to_drop = [x for x in list(df.columns) if x not in columns]
             df = df.drop(to_drop, axis=1)
+
+        if add_correlations and len(columns) >= 4: #se si vuole correlazione e gli indici sono almeno due
+            df_corr = self.correlation_df(columns[2], columns[3])
+            df = df.join(df_corr.set_index('country'), on='country')
+
         df.to_csv(filename, index=False, sep=';')
 
 
 
     def mongo_to_df(self):
         # salva i dati della collection merged_data in un dataframe
-
         # prende i nomi di tutti gli indici in ogni collection
         sides_columns = [] 
         for i,side in enumerate(self.to_check):
@@ -169,27 +173,7 @@ class Merger:
 
             self.sort_df()
             self.smooth_df()
-            self.calculate_percentages(columns)
-            print(self.df)
 
-
-    def calculate_percentages(self, columns):
-        #self.df = self.df.dropna(subset=['mobility_index'])
-        self.df = self.df[self.df['mobility_index'].notna()]
-        df2 = pd.DataFrame(columns=columns+['spotify_percentage', 'mobility_percentage'])
-        for c in set(self.df['country']):
-            tmp = self.df[self.df['country']==c].copy()
-
-            l = list(tmp['mean_index_no_recent'])
-            first = l[0]
-            tmp['spotify_percentage'] = [100*((x-first)/first) for x in l]
-
-            l = list(tmp['mobility_index'])
-            first = l[0]
-            tmp['mobility_percentage'] = [100*((x-first)/first) for x in l]
-
-            df2 = df2.append(tmp)
-        self.df = df2
 
     def sort_df(self):
         self.df = self.df.sort_values(by=['week','country'])
@@ -216,6 +200,14 @@ class Merger:
 
             df = df.append(smoothed_country)
 
+        # rimuove righe tutte nulle
+        df = df.copy().reset_index(drop=True)
+        df2 = df.copy()
+        del df2['country']
+        del df2['week']
+        nulls = df2.index[df2.isnull().all(1)]
+        df = df.drop(df.index[nulls])
+
         self.df = df.copy()
     
 
@@ -231,11 +223,11 @@ class Merger:
         x[first:last] = sm
         return x
 
-# -----------------
 
         
-    def correlation_csv(self, filename, column1, column2):
+    def correlation_df(self, column1, column2):
         # salva in un csv la correlazione tra i due indici passati come parametro
+        df_info = pd.read_csv('./spotify_netflix_covid/countries_info.csv', sep=';')
         self.mongo_to_df()
         tmp_df = pd.DataFrame()
         tmp_df['country'] = self.df['country']
@@ -243,7 +235,8 @@ class Merger:
         tmp_df[column2] = self.df[column2]
         tmp_df = tmp_df.dropna()
         tmp_df = self.get_correlations(tmp_df, column1, column2)
-        tmp_df.to_csv(filename, index=False, sep=';')
+        tmp_df = df_info.join(tmp_df.set_index('country'), on='country')
+        return tmp_df
 
 
     def get_correlations(self, df, column1, column2):
@@ -258,51 +251,6 @@ class Merger:
         return df_corr
 
 
-# --------------
-
-
-    def every_songs_csv(self, filename):
-        df = pd.DataFrame(columns=['country', 'week', 'title', 'artist', 'position', 'song_positivity'])
-
-        songs_info = self.get_songs_dict()
-
-        col = self.db[spotify_collection_name()]
-        result = col.find({}, {'week': 1, 'spotify': 1, '_id': 0})
-
-        for doc in result:
-            week = doc['week']
-            chart = doc['spotify']
-
-            countries = set(chart.keys())
-            countries.discard('ua')
-            countries.discard('ru')
-
-            for country in countries:
-                limit = datetime.strptime(week, '%Y-%m-%d') + timedelta(days=-90)
-
-                tmp = [[country, week, songs_info[song['id']]['title'], songs_info[song['id']]['artist'], song['position'], song['index']] 
-                            for song in chart[country]['songs']
-                            if (song['id'] in songs_info and datetime.strptime(songs_info[song['id']]['release_date'], '%Y-%m-%d') < limit)]
-
-                df = df.append(pd.DataFrame(tmp, columns=['country', 'week', 'title', 'artist', 'position', 'song_positivity']))
-
-            print('[every song merger] done week: ' + week)
-
-        df = df.reset_index(drop=True)
-        df.to_csv(filename, index=False, sep=';')
-
-
-    def get_songs_dict(self): # dizionario per le info delle canzoni
-        col_songs = self.db['songs']
-        result = col_songs.find({}, {'song_id': 1, 'release_date': 1, 'artist': 1, 'track_name': 1, '_id': 0})
-        songs_info = {s['song_id']: {'release_date': s['release_date'], 'artist': s['artist'], 'title': s['track_name']} for s in result}
-        return songs_info
-
-
-# ----------------
-
 
 m = Merger()
-m.mongo_to_csv('tuttoo.csv', ['mean_index_no_recent', 'mobility_index', 'spotify_percentage', 'mobility_percentage'])
-#m.correlation_csv('correlation_mean_index_no_recent.csv', 'mean_index_no_recent', 'mobility_index')
-# m.every_songs_csv('singole_canzoni.csv')
+m.mongo_to_csv('merged_data.csv', ['mean_index_no_recent', 'mobility_index'], True)
