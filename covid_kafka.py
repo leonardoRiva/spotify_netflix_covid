@@ -32,7 +32,7 @@ def get_covid_producer():
 
 
 
-def get_covid_consumer(merger):
+def get_covid_consumer(merger=None):
     # connessione a kafka come consumer
     consumer = KafkaConsumer(
         bootstrap_servers=['localhost:9092'],
@@ -52,4 +52,5 @@ def get_covid_consumer(merger):
         doc = msg.value
         collection.insert_one(doc)
         print("[Covid] document inserted correctly! " + doc['week'])
-        merger.notify('mobility', doc['week'])
+        if merger is not None:
+            merger.notify('mobility', doc)

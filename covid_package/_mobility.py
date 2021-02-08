@@ -14,7 +14,7 @@ class Covid_Side:
         downloaded_df = self.download_csv()
         cleaned_df = self.clean_csv(downloaded_df)
         df = self.calculate_index(cleaned_df)
-        df = self.get_normalized_mobility(df)
+        df = self.normalize(df)
         return df
 
 
@@ -25,13 +25,15 @@ class Covid_Side:
 
 
     def clean_csv(self, df):
-        # deletes useless columns, renames the remaining ones, 
+        # deletes useless columns, renames the remaining ones, delete not common countries
         # interpolates internal missing values, deletes rows with NaN
         del df['transit']
         del df['grocery and pharmacy']
         del df['residential']
         del df['workplaces']
         del df['transit stations']
+        k = [x.replace('-', ' ').title() for x in list(covid_countries_codes().keys())]
+        df = df[df.country.isin(k)] # keep common countries
         df = df.rename({'retail and recreation': 'recreation'}, axis='columns').reset_index(drop=True)
         df = self.interpolate_nan(df)
         df = df.dropna()
@@ -109,26 +111,11 @@ class Covid_Side:
         return new_df
 
 
-    def get_normalized_mobility(self, df):
-        # normalizes the mobility between -1 and 1
-        values = list(df['mobility'])
-        n = []
-        for v in values:
-            n.append(self.get_mobility_level_single(v))
-        df['mobility_norm'] = n
+    def normalize(self, df):
+        df['mobility'].values[df['mobility'] > 100] = 100 #tronca i valori oltre 100 (outlier estonia e pochi altri)
+        mmin, mmax = df['mobility'].min(), df['mobility'].max()
+        df['mobility_norm'] = (df['mobility']-mmin)/(mmax-mmin)
         return df
-
-
-    def get_mobility_level_single(self, m):
-        # from [...,-76] to [84,...]
-        # intervals length = 8
-        v = -1
-        limit = -76
-        while m >= limit and limit < 84:
-            v += 0.1
-            limit += 8
-        return round(v, 2)+0
-
 
 
     def get_week_doc(self, week):
@@ -142,8 +129,7 @@ class Covid_Side:
             country_dict = covid_countries_codes()
             for i in range(len(countries)):
                 c = countries[i].lower().replace(' ', '-')
-                if c in country_dict:
-                    doc[country_dict[c]] = {'mobility_abs_value': mobilities[i], 'mobility_index': mobilities_norm[i]}
+                doc[country_dict[c]] = {'mobility_abs_value': mobilities[i], 'mobility_index': mobilities_norm[i]}
             final = {'week': week, 'mobility': doc}
             return final
         else:
