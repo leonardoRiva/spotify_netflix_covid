@@ -25,7 +25,7 @@ producers.append(Thread(target=get_covid_producer))
 for c in consumers:
     c.start()
 
-time.sleep(0.2) # da mettere perché se no si perde il primo messaggio (booooooh)
+time.sleep(0.2) # da mettere perché se no si perde il primo messaggio
 
 for p in producers:
     p.start()

@@ -38,7 +38,7 @@ def get_netflix_producer():
         [t.start() for t in q_thread]
         [t.join() for t in q_thread]
 
-        print('[NETFLIX] SEND ALL week ' +  str(w))
+        print('\n' + '[NETFLIX] SEND ALL week ' + str(w) + '\n')
         producer.send(topic='netflix', value={'week':w, 'countries': q_result})
         time.sleep(0.1)
 

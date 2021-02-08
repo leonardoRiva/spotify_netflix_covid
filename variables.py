@@ -43,10 +43,10 @@ def get_weeks_old():
       weeks.append(datetime.strftime(i, '%Y-%m-%d'))
       i += timedelta(days=7)
    return weeks
-   
+
 
 def db_name():
-   return 'progettoDB' 
+   return 'lastTest' #'progettoDB'
 
 def spotify_collection_name():
    return 'spoti_weeks'

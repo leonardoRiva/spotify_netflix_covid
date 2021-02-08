@@ -45,7 +45,7 @@ class IMDB_Interface():
     def get_movie_key(self, title):
         if title != '':
             movies = []
-            
+
             try:
                 movies = self.ia.search_movie(title)
             except Exception as e:
@@ -108,7 +108,7 @@ class IMDB_Interface():
         titles = df["title"].tolist()
         df[['_id','genres','keywords','plot outline']] = ''
 
-        n_thread = 2
+        n_thread = 1
         q_result = []
         q_thread = []
         step = math.floor(len(titles)/n_thread)

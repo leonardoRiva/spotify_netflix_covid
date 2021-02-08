@@ -1,4 +1,6 @@
 import pymongo as pymdb
+from . import genre_sentiment as GS
+from . import _functions as FS
 
 class Movies_DB():
 
@@ -25,25 +27,16 @@ class Movies_DB():
         self.db.netflix_chart.insert(week_doc)
         return week_doc
 
-    # def store_week(self, week_df):
-    #     week = week_df["week_from"][0]
-    #     country_code = self.country_dict[week_df["country"][0]]
-    #     movie_docs = [self.movie_subdoc(week_df.iloc[r]) for r in range(len(week_df))]
-    #     week_doc = self.db.netflix_chart.find({"week":week}).limit(1)
-    #     if week_doc.count() == 1:
-    #         if self.db.netflix_chart.find({"week":week, "netflix."+country_code : {"$exists": True}}).count() == 0:
-    #             self.db.netflix_chart.update({"week":week}, {"$set": {"netflix."+country_code : self.country_subdoc(country_code, movie_docs)[country_code]}})
-    #     else:
-    #         week_doc = self.week_doc(week, country_code, movie_docs)
-    #         self.db.netflix_chart.insert(week_doc)
-
     def movie_doc(self, _id, title, genres, keywords, plot_outline):
         movie_doc = {
             "_id": _id,
             "title": title,
             "genres": genres.split(),
             "keywords": keywords.split(),
-            "plot outline": plot_outline
+            "plot outline": plot_outline,
+            "kw_sent": FS.kw_sent_mean(keywords),
+            "plot_sent": FS.plot_sent_mean(plot_outline),
+            "genre_sent": sum([GS.zgsent[g] for g in genres.split()])/len(genres.split()) if len(genres.split())>0 else None
         }
         return movie_doc
 
@@ -55,26 +48,25 @@ class Movies_DB():
         return week_doc
 
     def country_subdoc(self, country_code, movie_docs):
+        indexes = self.country_indexes(movie_docs)
         country_subdoc = {
             country_code: {
                 "movies" : movie_docs,
-                "kw_sum" : self.sentiment(movie_docs, "kw_sent_sum"),
-                "kw_mean" : self.sentiment(movie_docs, "kw_sent_mean"),
-                "plot_sum" : self.sentiment(movie_docs, "plot_sent_sum"),
-                "plot_mean" : self.sentiment(movie_docs, "plot_sent_mean")
+                "meanp_gsent_noout": indexes['meanp_gsent_noout'],
+                "gsent_cohesion": indexes['gsent_cohesion'],
+                "genre_popularity": indexes['genre_popularity']
             }
         }
         return country_subdoc
 
     def movie_subdoc(self, df_row):
+        genres = (df_row['genres']).split()
         subdoc = {
             "id":df_row["_id"],
             "title": df_row["title"],
             "position": int(df_row["position"]),
-            "kw_sent_sum": float(df_row["kw_sent_sum"]),
-            "kw_sent_mean": float(df_row["kw_sent_mean"]),
-            "plot_sent_sum": float(df_row["plot_sent_sum"]),
-            "plot_sent_mean": float(df_row["plot_sent_mean"])
+            "genres": genres,
+            "gsent": sum([GS.zgsent[g] for g in genres])/len(genres) if len(genres)>0 else None
         }
         return subdoc
 
@@ -83,3 +75,43 @@ class Movies_DB():
         for md in movie_docs:
             somma = somma + md[sent_field]
         return somma/(len(movie_docs)) if len(movie_docs)>0 else 0
+
+    def country_indexes(self, movie_docs):
+        gchart = {}
+        cchart = {}
+        for p,m in enumerate(movie_docs):
+            for g in m['genres']:
+                score = ((12-(p+1))/3) if (p+1)<10 else 1
+                gchart[g] = gchart[g]+score if g in gchart else score
+                cchart[g] = cchart[g]+1 if g in cchart else 1
+
+        somma = 0
+        count = 0
+        for g in gchart:
+            if g in GS.zgsent:
+                somma = (somma + (GS.zgsent[g] * gchart[g]))
+                count = count + gchart[g]
+        meanp_noout = somma / count if count>0 else 0
+
+        cchart = dict(sorted(cchart.items(), key=lambda item: item[1]))
+        cc = []
+        for i,k in enumerate(reversed(cchart)):
+            if i < 10:
+                cc.append(k)
+        distTK=[]
+        for ic,g in enumerate(cc):
+            if ic < 5:
+                if g in GS.zgsent:
+                    distTK.append(GS.zgsent[g])
+        stk=0
+        for ik,tk in enumerate(distTK):
+            if ik>0:
+                stk = stk + abs(distTK[ik-1]-distTK[ik])
+        mstk=stk/(len(distTK)-1) if len(distTK)>1 else None
+
+        indexes = {
+            'meanp_gsent_noout': meanp_noout,
+            'gsent_cohesion': mstk,
+            'genre_popularity': gchart
+        }
+        return indexes
