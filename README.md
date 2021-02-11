@@ -2,7 +2,7 @@
 Spotify's songs &amp; Netflix's movies positivity over Covid incidence
 
 ### Features
-The software uses Apache Kafka to download and elaborate data from Spotify CSV charts, Netflix FlixPatrol.com charts (scraped) and Apple-Google mobility. These data is updated every week for 47 countries.
+The software uses Apache Kafka to download and elaborate data from Spotify CSV charts, Netflix FlixPatrol.com charts (scraped) and Apple-Google mobility. These data is updated every week for 45 countries.
 These data is then integrated with the help of IMDb API and Spotify API. 
 Finally, everything is stored in a MongoDB database.
 
