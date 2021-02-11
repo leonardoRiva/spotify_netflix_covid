@@ -131,13 +131,12 @@ class Merger:
     def mongo_to_df(self):
         # salva i dati della collection merged_data in un dataframe
         # prende i nomi di tutti gli indici in ogni collection
-        sides_columns = [] 
-        for i,side in enumerate(self.to_check):
-            result = self.db[self.collection_names[i]].find_one({})
-            indexes_names = set(result[side]['it'].keys())
-            indexes_names.discard('songs')
-            indexes_names.discard('movies')
-            sides_columns.append(list(indexes_names))
+
+        sides_columns = [['mean_index', 'median_index', 'mean_index_no_recent', 'median_index_no_recent', 'min_all', 
+                            'max_all', 'min_no_recent', 'max_no_recent', 'weighted_mean_index_no_recent', 'weighted_mean_index_all', 
+                            'mean_valences', 'mean_energies', 'mean_danceabilities'], 
+                        ['mobility_abs_value', 'mobility_index'], 
+                        ['meanp_gsent_noout', 'gsent_cohesion', 'genre_poppularity']]
 
         columns = ['country', 'week'] + sides_columns[0] + sides_columns[1] + sides_columns[2]
 

@@ -16,7 +16,11 @@ def get_weeks(collection_name):
         presenti = []
 
     # array con tutti i lunedì dall'inizio
-    i = datetime.strptime('2020-02-17', '%Y-%m-%d')
+    starting_week = '2020-02-17'
+    if 'netflix' in collection_name:
+       starting_week = '2020-08-10'
+
+    i = datetime.strptime(starting_week, '%Y-%m-%d')
     mondays = []
     today = datetime.today()
     while i < today:
@@ -25,7 +29,6 @@ def get_weeks(collection_name):
 
     # array con le settimane mancanti nella collection
     mancanti = [x for x in mondays if x not in presenti]
-
     return mancanti
 
 
@@ -47,8 +50,8 @@ def get_weeks_old():
 
 
 def db_name():
-   print('INSERIRE NOME DATABASE')
-   return 'progettoDB'
+   print('CHECKING DB NAME...')
+   return 'testDB'
 
 def spotify_collection_name():
    return 'spoti_weeks'

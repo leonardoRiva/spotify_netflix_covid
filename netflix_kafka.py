@@ -79,7 +79,7 @@ def get_netflix_consumer(merger=None):
 
         print("\n" + "[NETFLIX] CONSUMED ALL week " + str(week) + " in " + str(time.time()-tstart) + "\n")
         if merger is not None:
-            merger.notify('netflix', week_doc["week"]) # TODO TEST
+            merger.notify('netflix', week_doc)
 
 #------------------------------------------------------------------------------#
 
