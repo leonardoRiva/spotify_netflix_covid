@@ -136,7 +136,7 @@ class Merger:
                             'max_all', 'min_no_recent', 'max_no_recent', 'weighted_mean_index_no_recent', 'weighted_mean_index_all', 
                             'mean_valences', 'mean_energies', 'mean_danceabilities'], 
                         ['mobility_abs_value', 'mobility_index'], 
-                        ['meanp_gsent_noout', 'gsent_cohesion', 'genre_poppularity']]
+                        ['meanp_gsent_noout', 'gsent_cohesion', 'genre_popularity']]
 
         columns = ['country', 'week'] + sides_columns[0] + sides_columns[1] + sides_columns[2]
 
